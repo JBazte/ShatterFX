@@ -9,8 +9,8 @@ ShatterFX is an exciting project that brings a realistic object fragmentation si
 ## Controls ⌨️
 * `W, A, S, D` - Camera movement
 * `⇦⇧⇩⇨` - Object movement
-* `Z, X` - Collision speed
-* `⎵` - Spacebar
+* `Z, X` - Object speed
+* `⎵` - Reset object
 * `P` - Pause
 
 ## Built with 🛠️
