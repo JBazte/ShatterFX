@@ -4,14 +4,18 @@ using UnityEngine;
 
 public class CambiarModelo : MonoBehaviour
 {
-    [SerializeField] private GameObject modelo;
-    [SerializeField] private Mesh mesh_platoRoto;
-    [SerializeField] private Mesh mesh_platoNormal;
+    [SerializeField]
+    private GameObject normal_plate;
+    [SerializeField]
+    private GameObject broken_plate;
+    
 
     private void OnCollisionEnter(Collision collision)
     {
-        modelo.GetComponent<MeshFilter>().mesh = mesh_platoRoto;
-        this.GetComponent<MeshCollider>().sharedMesh = mesh_platoRoto;
+        Vector3 position = normal_plate.transform.position;
+        normal_plate.SetActive(false);
+        broken_plate.transform.position = position;
+        broken_plate.SetActive(true);
         Debug.Log("Colisionado");
     }
 
