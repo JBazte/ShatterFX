@@ -18,6 +18,7 @@ namespace GK {
 
         float _Area = -1.0f;
 
+        // Age counter 
         int age;
 
         public float Area {
@@ -77,6 +78,7 @@ namespace GK {
             float impactForce = col.relativeVelocity.magnitude * Rigidbody.mass;
             Debug.Log("Impact force: " + impactForce);
             if (age > 5 && (impactForce) > MinImpactToBreak) {
+                // first point of impact
                 var pnt = col.contacts[0].point;
                 Break((Vector2)transform.InverseTransformPoint(pnt));
             }
