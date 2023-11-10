@@ -4,17 +4,16 @@ using UnityEngine;
 using UnityEditor;
 
 
-public class GeneratePoints : MonoBehaviour
-{
-   // [SerializeField] private GameObject prefabPoint;
+public class GeneratePoints : MonoBehaviour {
+    // [SerializeField] private GameObject prefabPoint;
     [SerializeField] private int numPoints;
     private Vector3[] arrayPoints;  //point coordenates array
     private float sizeX;
     private float sizeZ;
-    
-    void Start()
-    {
-        
+    private VoronoiDiagram vd;
+
+    void Start() {
+        vd = GetComponent<VoronoiDiagram>();
         Mesh planeMesh = this.GetComponent<MeshFilter>().mesh;
         arrayPoints = new Vector3[numPoints];
 
@@ -29,33 +28,42 @@ public class GeneratePoints : MonoBehaviour
     }
 
 
-    private void PlacePoints()
-    {
+    private void PlacePoints() {
         //intantiate a point numPoint number of times
-        for(int i=0; i< numPoints; i++)
-        {
+        for (int i = 0; i < numPoints; i++) {
             float x = Random.Range(this.transform.position.x - sizeX / 2, this.transform.position.x + sizeX / 2);
             float z = Random.Range(this.transform.position.z - sizeZ / 2, this.transform.position.z + sizeZ / 2);
 
             arrayPoints[i] = new Vector3(x, this.transform.position.y, z);
             Debug.Log(arrayPoints[i]);
         }
+
+        vd.CalculateVoronoiDiagram();
     }
 
 
-    private void OnDrawGizmos()
-    {
-//this #if #endif is for not throwing an error while playing the demo
+    private void OnDrawGizmos() {
+        //this #if #endif is for not throwing an error while playing the demo
 #if UNITY_EDITOR
-        if (EditorApplication.isPlaying)
-        {
-            for (int i = 0; i < numPoints; i++)
-            {
+        if (EditorApplication.isPlaying) {
+            for (int i = 0; i < numPoints; i++) {
                 Gizmos.color = Color.red;
                 Gizmos.DrawSphere(arrayPoints[i], 0.1f);
             }
         }
 #endif
 
+    }
+
+    public Vector3[] GetPoints() {
+        return arrayPoints;
+    }
+
+    public int GetSizeX() {
+        return (int)sizeX;
+    }
+
+    public int GetSizeZ() {
+        return (int)sizeZ;
     }
 }
