@@ -136,7 +136,6 @@ GameObject:
   - component: {fileID: 845841582}
   - component: {fileID: 845841581}
   - component: {fileID: 845841585}
-  - component: {fileID: 845841586}
   m_Layer: 0
   m_Name: Plane
   m_TagString: Untagged
@@ -240,24 +239,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 845841580}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d85c8d30c43a8ed4a9730befa58186cb, type: 3}
+  m_Script: {fileID: 11500000, guid: 06f39f998d38e614696950f496224b13, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  size: 128
   numPoints: 10
---- !u!114 &845841586
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 845841580}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 59d2eebf666de1b4dac1d6efcfcd1647, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  pointGenerator: {fileID: 0}
-  regionColorAmount: 10
 --- !u!1 &1716942083
 GameObject:
   m_ObjectHideFlags: 0
