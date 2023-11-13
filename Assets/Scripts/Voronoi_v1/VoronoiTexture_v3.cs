@@ -4,7 +4,15 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-public class VoronoiTexture_v2 : MonoBehaviour {
+public class VoronoiTexture_v3 : MonoBehaviour {
+      
+
+    //CALCULAR LOS VÉRTICES A TRAVÉS DE RECTAS Y NORMALES
+    //1º VER LOS PUNTOS QUE ESTÁN CERCA UNOS DE OTROS
+    //2º rECTA ENTRE 2 PUNTOS Y HALLAR LA NORMAL
+    //VER DONDE CORTAN, ASÍ TENEMOS LOS VÉRTICES
+
+
 
     [SerializeField] private int size;
     [SerializeField] private int numPoints;
