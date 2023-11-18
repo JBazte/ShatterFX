@@ -76,12 +76,18 @@ public class VoronoiTexture_v3 : MonoBehaviour {
              checkVertexes(points, i, regionColors);
          }
 
+        //we'll add to the vertexes array the corners of the plane
+        vertexes.Add(new Vector3(0, 0, 0));
+        vertexes.Add(new Vector3(0, 0, size-1));
+        vertexes.Add(new Vector3(size-1, 0, 0));
+        vertexes.Add(new Vector3(size-1, 0, size-1));
+
         //we color the vertexes
         for (int i=0; i < vertexes.Count; i++){
 
             int x = (int)vertexes[i].x;
             int z = (int)vertexes[i].z;
-            pixelColors[x + z * size] = Color.black;
+            pixelColors[x + z * size] = Color.cyan;
             
         }
 
@@ -106,7 +112,7 @@ public class VoronoiTexture_v3 : MonoBehaviour {
 
         //auxiliar arrays to store the variables of each the normal line ecuation 
         float[] mNormals = new float[points.Length - 1];
-        float[] bNormals = new float[points.Length - 1];
+        float[] bNormals = new float[points.Length - 1]; 
         int indexPoints = 0;
 
         //1º We calculate the distance between the point and the others
@@ -141,6 +147,7 @@ public class VoronoiTexture_v3 : MonoBehaviour {
         }
 
         //3º Once we have all the normals, we have to check where they converge
+
         for (int i=0; i < pointsDistances.Count; i++)
         {
             for (int j = 0; j < pointsDistances.Count; j++)
@@ -154,9 +161,10 @@ public class VoronoiTexture_v3 : MonoBehaviour {
                         //Then we calculate the intersection point of both line ecuations
                         Vector3 intersectionPoint = CalculateIntersectionPoint(mNormals[i], bNormals[i], mNormals[j], bNormals[j]);
 
-                        //We have to be sure the intersection point is within the bounds of the plane size * size
+                        //We have to make sure that the intersection point is within the bounds of the plane size * size
                         if (intersectionPoint.x <= size && intersectionPoint.z <= size && intersectionPoint.x >=0 && intersectionPoint.z >= 0)
                         {
+                            
                             //see of which color is the intersection point
                             Color interPointColor = pixelColors[(int)intersectionPoint.x + (int)intersectionPoint.z * size];
 
@@ -184,7 +192,94 @@ public class VoronoiTexture_v3 : MonoBehaviour {
                 }
             }
         }
+
+
+
+        //4º We do the same but with the limits of the plane
+
+        List<float> limitLines = new List<float>();
+        //impar: x   par: y
+        limitLines.Add(0);
+        limitLines.Add(0);
+        limitLines.Add(size-1);
+        limitLines.Add(size-1);
+
+        //We'll add the limits of the plane, 4 in this case
+
+        /*
+         A                  B
+         --------------------
+         |                  |
+         |                  |
+         |                  |
+         |                  |
+         |                  |
+         |                  |
+         |                  |
+         |                  |
+         --------------------
+         C                  D
+         
+
+         Recta CA: x = 0   
+         Recta AB: y = size - 1
+         Recta CD: y = 0
+         Recta DB: x = size - 1 */
+
+        for (int i = 0; i < pointsDistances.Count; i++)
+        {
+            //For each line ecuation we'll compare with the borders (also line ecuations)
+            for(int j = 0; j < limitLines.Count; j++)
+            {
+                if (mNormals[i] != limitLines[j])
+                {
+                    Vector3 intersectionPoint = new Vector3(0, 0, 0);
+
+                    //impar: x   par: y
+                    if (j % 2 == 0)
+                    {
+                        intersectionPoint = CalculateHorizontalLines(mNormals[i], bNormals[i], limitLines[j]);
+
+                    }
+                    else
+                    {
+                        intersectionPoint = CalculateVerticalLines(mNormals[i], bNormals[i], limitLines[j]);
+                    }
+
+
+
+                    if (intersectionPoint.x < size && intersectionPoint.z < size && intersectionPoint.x >= 0 && intersectionPoint.z >= 0)
+                    {
+                        Debug.Log(intersectionPoint);
+                        //see of which color is the intersection point
+                        Color interPointColor = pixelColors[(int)intersectionPoint.x + (int)intersectionPoint.z * size];
+
+                        //if it has the same color as the area of the main point, this intersection point is a vertex of this area
+                        if (interPointColor == regionColors[indexArea])
+                        {
+                            //we have to make sure it isn't already in the vertex list
+                            bool alreadyAdded = false;
+                            for (int k = 0; k < vertexes.Count; k++)
+                            {
+                                if (vertexes[k] == intersectionPoint)
+                                {
+                                    alreadyAdded = true;
+                                }
+                            }
+
+                            //if it isn't, we add it
+                            if (!alreadyAdded)
+                            {
+                                vertexes.Add(intersectionPoint);
+                            }
+                        }
+                    }
+                }
+                
+            }
+        }
     }
+
 
     private Vector3 CalculateIntersectionPoint(float m1, float b1, float m2, float b2)
     {
@@ -192,6 +287,22 @@ public class VoronoiTexture_v3 : MonoBehaviour {
         float y = m1 * x + b1;
 
         return new Vector3(x, 0, y);
+    }
+
+    private Vector3 CalculateHorizontalLines(float m1, float b1, float y)
+    {
+        // Calcular x utilizando la ecuación y = mx + b
+        float xIntersection = (y - b1) / m1;
+
+        return new Vector3(xIntersection, 0, y);
+    }
+
+    private Vector3 CalculateVerticalLines(float m1, float b1, float x)
+    {
+        // Punto de intersección con la recta vertical x = size
+        float yIntersection = m1 * x + b1;
+
+        return new Vector3(x, 0, yIntersection);
     }
 
 }
