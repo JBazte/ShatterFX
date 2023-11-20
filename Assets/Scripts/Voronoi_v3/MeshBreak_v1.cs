@@ -19,9 +19,6 @@ public class MeshBreak_v1 : MonoBehaviour
         - Cut the shape from the original mesh or maybe just deactivate it once done
      */
 
-    [SerializeField]
-    private VoronoiTexture_v4 voronoi;
-
     public void deleteTri(int index)
     {
         Destroy(gameObject.GetComponent<MeshCollider>());

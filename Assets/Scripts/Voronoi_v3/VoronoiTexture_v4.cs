@@ -1,7 +1,10 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
+using static UnityEditor.Searcher.SearcherWindow.Alignment;
+using UnityEngine.AI;
 
 public class VoronoiTexture_v4 : MonoBehaviour {     
 
@@ -12,18 +15,26 @@ public class VoronoiTexture_v4 : MonoBehaviour {
     private Color[] pixelColors;
 
     //list to store the pixel vertexes
-    [HideInInspector]
-    public List<Vector3>[] vertexes;
+    private List<Vector3>[] areaVertexes;
+    List<Vector3>[] areaVertexesClean;
+    
 
-    private Mesh originalMesh;
+private Mesh originalMesh;
 
     void Start()
     {
-        vertexes = new List<Vector3>[numPoints];
+        areaVertexes = new List<Vector3>[numPoints];
         for (int i = 0; i < numPoints; i++)
         {
-            vertexes[i] = new List<Vector3>();
+            areaVertexes[i] = new List<Vector3>();
         }
+
+        areaVertexesClean = new List<Vector3>[numPoints];
+        for (int i = 0; i < numPoints; i++)
+        {
+            areaVertexesClean[i] = new List<Vector3>();
+        }
+
         pixelColors = new Color[size * size];
         originalMesh = transform.GetComponent<MeshFilter>().mesh;
 
@@ -41,12 +52,12 @@ public class VoronoiTexture_v4 : MonoBehaviour {
         //V3: we supose the order of 'regionColors[]' tells us which point of 'points[]' is assigned to each color area
         for (int i = 0; i < numPoints; i++)
         {
-            points[i] = new Vector3(Random.Range(0, size), 0, Random.Range(0, size));
+            points[i] = new Vector3(UnityEngine.Random.Range(0, size), 0, UnityEngine.Random.Range(0, size));
         }
 
         for (int i = 0; i < numPoints; i++)
         {
-            regionColors[i] = new Color(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f), 1f);
+            regionColors[i] = new Color(UnityEngine.Random.Range(0f, 1f), UnityEngine.Random.Range(0f, 1f), UnityEngine.Random.Range(0f, 1f), 1f);
         }
 
         // Generate Voronoi diagram by assigning colors based on the nearest point
@@ -89,14 +100,45 @@ public class VoronoiTexture_v4 : MonoBehaviour {
         //we'll add to the vertexes array the corners of the plane
         AddCorners(pixelColors, regionColors);
 
-        //we color the vertexes
-        for (int i = 0; i < vertexes.Length; i++)
+        //We remove the duplicate values of every list for each area
+        bool isIn = false;
+        for (int i = 0; i < numPoints; i++)
         {
-            for (int j = 0; j < vertexes[i].Count; j++)
+            List<Vector3> aux = new List<Vector3>();
+            for (int j = 0; j < areaVertexes[i].Count; j++)
             {
-                //Debug.Log(ColorUtility.ToHtmlStringRGB(regionColors[i]) + ": " + vertexes[i][j]);
-                int x = (int)vertexes[i][j].x;
-                int z = (int)vertexes[i][j].z;
+                isIn = false;
+                for (int k = 0; k < aux.Count; k++)
+                {
+                    if (areaVertexes[i][j] == aux[k])
+                    {
+                        isIn = true;
+                    }
+                }
+
+                if(!isIn)
+                {
+                    aux.Add(areaVertexes[i][j]);
+                    //Debug.Log(areaVertexes[i][j]);
+                }
+            }
+            areaVertexesClean[i] = aux;
+            //Debug.Log("num " + i + ": " +  aux.Count);
+        }
+
+        //for (int i = 0; i < areaVertexesClean.Length; i++)
+        //{
+        //    Debug.Log(areaVertexesClean[i].Count);
+        //}
+
+        //we color the vertexes
+        for (int i = 0; i < areaVertexesClean.Length; i++)
+        {
+            for (int j = 0; j < areaVertexesClean[i].Count; j++)
+            {
+                //Debug.Log(ColorUtility.ToHtmlStringRGB(regionColors[i]) + ": " + areaVertexesClean[i][j]);
+                int x = (int)areaVertexesClean[i][j].x;
+                int z = (int)areaVertexesClean[i][j].z;
                 pixelColors[x + z * size] = Color.cyan;
             }
         }
@@ -107,8 +149,9 @@ public class VoronoiTexture_v4 : MonoBehaviour {
         texture.Apply();
 
         GetComponent<Renderer>().material.mainTexture = texture;
-    }
 
+        Debug.Log(ColorUtility.ToHtmlStringRGB(regionColors[0]) + " " + areaVertexesClean[0].Count);
+    }
 
     private void checkVertexes(Vector3[] points, int indexArea, Color[] regionColors)
     {
@@ -132,7 +175,7 @@ public class VoronoiTexture_v4 : MonoBehaviour {
             {
                 pointsDistances.Add(points[i],Vector3.Distance(actualPoint, points[i]));
             }
-
+            
         }
 
         //We order it from min to max distance value (Value)
@@ -157,19 +200,21 @@ public class VoronoiTexture_v4 : MonoBehaviour {
         }
 
         //3º Once we have all the normals, we have to check where they converge
-
-        for (int i=0; i < pointsDistances.Count; i++)
+        int indexI = 0;
+        int indexJ = 0;
+        foreach (var i in pointsDistances)
         {
-            for (int j = 0; j < pointsDistances.Count; j++)
+            //For each line ecuation we'll compare with the borders (also line ecuations)
+            foreach (var j in pointsDistances)
             {
                 //We'll not compare the same line
-                if (i!=j)
+                if (indexI!=indexJ)
                 {
                     //First we check if they aren't parallel lines
-                    if (mNormals[i] != mNormals[j])
+                    if (mNormals[indexI] != mNormals[indexJ])
                     {
                         //Then we calculate the intersection point of both line ecuations
-                        Vector3 intersectionPoint = CalculateIntersectionPoint(mNormals[i], bNormals[i], mNormals[j], bNormals[j]);
+                        Vector3 intersectionPoint = CalculateIntersectionPoint(mNormals[indexI], bNormals[indexI], mNormals[indexJ], bNormals[indexJ]);
 
                         //We have to make sure that the intersection point is within the bounds of the plane size * size
                         if (intersectionPoint.x <= size && intersectionPoint.z <= size && intersectionPoint.x >=0 && intersectionPoint.z >= 0)
@@ -181,13 +226,34 @@ public class VoronoiTexture_v4 : MonoBehaviour {
                             //if it has the same color as the area of the main point, this intersection point is a vertex of this area
                             if (interPointColor == regionColors[indexArea])
                             {
-                                
-                                vertexes[indexArea].Add(intersectionPoint);
+                                Vector3 pointA = i.Key;
+                                Vector3 pointB = j.Key;
+                                int indexAinPoints = 0;
+                                int indexBinPoints = 0;
+
+                                for(int k = 0; k < points.Length; k++)
+                                {
+                                    if (points[k] == pointA)
+                                    {
+                                        indexAinPoints = k;
+                                    }
+                                    else if (points[k] == pointB)
+                                    {
+                                        indexBinPoints = k;
+                                    }
+                                }
+
+                                areaVertexes[indexArea].Add(intersectionPoint);
+                                areaVertexes[indexAinPoints].Add(intersectionPoint);
+                                areaVertexes[indexBinPoints].Add(intersectionPoint);
                             }
                         }
                     }
                 }
+                indexJ++;
             }
+            indexI++;
+            indexJ = 0;
         }
 
 
@@ -222,25 +288,25 @@ public class VoronoiTexture_v4 : MonoBehaviour {
          Recta AB: y = size - 1
          Recta CD: y = 0
          Recta DB: x = size - 1 */
-
-        for (int i = 0; i < pointsDistances.Count; i++)
+        indexI = 0;
+        foreach (var i in pointsDistances)
         {
             //For each line ecuation we'll compare with the borders (also line ecuations)
             for(int j = 0; j < limitLines.Count; j++)
             {
-                if (mNormals[i] != limitLines[j])
+                if (mNormals[indexI] != limitLines[j])
                 {
                     Vector3 intersectionPoint = new Vector3(0, 0, 0);
 
                     //impar: x   par: y
                     if (j % 2 == 0)
                     {
-                        intersectionPoint = CalculateHorizontalLines(mNormals[i], bNormals[i], limitLines[j]);
+                        intersectionPoint = CalculateHorizontalLines(mNormals[indexI], bNormals[indexI], limitLines[j]);
 
                     }
                     else
                     {
-                        intersectionPoint = CalculateVerticalLines(mNormals[i], bNormals[i], limitLines[j]);
+                        intersectionPoint = CalculateVerticalLines(mNormals[indexI], bNormals[indexI], limitLines[j]);
                     }
 
 
@@ -254,15 +320,26 @@ public class VoronoiTexture_v4 : MonoBehaviour {
                         //if it has the same color as the area of the main point, this intersection point is a vertex of this area
                         if (interPointColor == regionColors[indexArea])
                         {
-                            vertexes[indexArea].Add(intersectionPoint);
+                            Vector3 pointA = i.Key;
+                            int indexAinPoints = 0;
+
+                            for (int k = 0; k < points.Length; k++)
+                            {
+                                if (points[k] == pointA)
+                                {
+                                    indexAinPoints = k;
+                                }
+                            }
+
+                            areaVertexes[indexArea].Add(intersectionPoint);
+                            areaVertexes[indexAinPoints].Add(intersectionPoint);
                         }
                     }
                 }
-                
             }
+            indexI++;
         }
     }
-
 
     private Vector3 CalculateIntersectionPoint(float m1, float b1, float m2, float b2)
     {
@@ -294,19 +371,19 @@ public class VoronoiTexture_v4 : MonoBehaviour {
         { //x + z * size
             if (pixelColors[0] == regionColors[i]) //x=0, z=0
             {
-                vertexes[i].Add(new Vector3(0, 0, 0));
+                areaVertexes[i].Add(new Vector3(0, 0, 0));
             }
-            if (pixelColors[size - 1] == regionColors[i]) //x=size - 1, z=0
+            else if (pixelColors[size - 1] == regionColors[i]) //x=size - 1, z=0
             {
-                vertexes[i].Add(new Vector3(size - 1, 0, 0));
+                areaVertexes[i].Add(new Vector3(size - 1, 0, 0));
             }
-            if (pixelColors[size - 1 * size] == regionColors[i]) //x=0, z=size - 1
+            else if (pixelColors[(size - 1) * size] == regionColors[i]) //x=0, z=size - 1
             {
-                vertexes[i].Add(new Vector3(0, 0, size - 1));
+                areaVertexes[i].Add(new Vector3(0, 0, size - 1));
             }
-            if (pixelColors[size - 1 + size - 1 * size] == regionColors[i]) //x=size - 1, z=size - 1
+            else if (pixelColors[size - 1 + (size - 1) * size] == regionColors[i]) //x=size - 1, z=size - 1
             {
-                vertexes[i].Add(new Vector3(size - 1, 0, size - 1));
+                areaVertexes[i].Add(new Vector3(size - 1, 0, size - 1));
             }
         }
         
@@ -325,16 +402,44 @@ public class VoronoiTexture_v4 : MonoBehaviour {
         Get vertices of each shape
         For each shape:
         - Save the original mesh
-        - Create a mesh from the given vertices, organize the vertices into triangles
+        - Create a mesh from the given vertices --> organize the vertices into triangles (3 vert, 1 tri, 0 1 2; 4 vert, 2 tri, 0 1 2 0 2 3; 5 vert, 3 tri, 0 1 2 0 2 3 0 3 4)
         - Create a gameObject with the new mesh
         - Cut the shape from the original mesh or maybe just deactivate it once done
      */
 
     private void breakMesh()
     {
-        for (int i = 0; i < vertexes.Length; i++)
+        //for (int i = 0; i < numPoints; i++) //Do this for each resulting area
+        //{
+        Mesh newMesh = new Mesh();
+        newMesh.vertices = areaVertexesClean[0].ToArray();
+        int auxVertices = 1;
+        List<int> aux = new List<int>();
+
+        if(newMesh.vertices.Length >= 3) //There needs to be at least 3 vertices for a triangle
         {
-            Debug.Log(vertexes[i].Count);
+            newMesh.triangles = new int[newMesh.vertices.Length*3];
+            for (int j = 1; j <= newMesh.vertices.Length - 2; j++) //The number of triangles is the number of vertices minus 2
+            {
+                aux.Add(0);
+                aux.Add(auxVertices++);
+                aux.Add(auxVertices++);
+                auxVertices = j;
+            }
         }
+
+        newMesh.triangles = aux.ToArray();
+        
+        for (int i = 0; i < newMesh.triangles.Length; i++)
+        {
+            Debug.Log(newMesh.triangles[i]);
+        }
+
+        GameObject a = new GameObject();
+        a.AddComponent<MeshFilter>();
+        a.AddComponent<MeshRenderer>();
+        a.transform.GetComponent<MeshFilter>().mesh = newMesh;
+        //a.AddComponent<MeshCollider>();
+        //}
     }
 }
