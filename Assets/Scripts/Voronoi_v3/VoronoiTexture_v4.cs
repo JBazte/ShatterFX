@@ -13,6 +13,7 @@ public class VoronoiTexture_v4 : MonoBehaviour {
 
     // Array to store pixel colors for the texture
     private Color[] pixelColors;
+    private Color[] regionColors;
 
     //list to store the pixel vertexes
     private List<Vector3>[] areaVertexes;
@@ -37,7 +38,7 @@ private Mesh originalMesh;
 
         pixelColors = new Color[size * size];
         originalMesh = transform.GetComponent<MeshFilter>().mesh;
-
+        regionColors = new Color[numPoints];
         CreateVoronoi();
         breakMesh();
     }
@@ -46,7 +47,7 @@ private Mesh originalMesh;
     {
         // Arrays to store Voronoi points and corresponding region colors
         Vector3[] points = new Vector3[numPoints];
-        Color[] regionColors = new Color[numPoints];
+        
 
         // Generate random points and colors
         //V3: we supose the order of 'regionColors[]' tells us which point of 'points[]' is assigned to each color area
@@ -130,6 +131,20 @@ private Mesh originalMesh;
         //{
         //    Debug.Log(areaVertexesClean[i].Count);
         //}
+
+        for (int i = 0; i < areaVertexesClean.Length; i++)
+        {
+            for (int j = 0; j < areaVertexesClean[i].Count - 1; j++)
+            {
+                for (int k = 0; k < areaVertexesClean[i].Count - j -1; k++)
+                    if (areaVertexesClean[i][k].x > areaVertexesClean[i][k + 1].x && areaVertexesClean[i][k].z > areaVertexesClean[i][k + 1].z)
+                    {
+                        var tempVar = areaVertexesClean[i][k];
+                        areaVertexesClean[i][k] = areaVertexesClean[i][k + 1];
+                        areaVertexesClean[i][k + 1] = tempVar;
+                    }
+            }
+        }
 
         //we color the vertexes
         for (int i = 0; i < areaVertexesClean.Length; i++)
@@ -409,37 +424,74 @@ private Mesh originalMesh;
 
     private void breakMesh()
     {
-        //for (int i = 0; i < numPoints; i++) //Do this for each resulting area
-        //{
-        Mesh newMesh = new Mesh();
-        newMesh.vertices = areaVertexesClean[0].ToArray();
-        int auxVertices = 1;
-        List<int> aux = new List<int>();
-
-        if(newMesh.vertices.Length >= 3) //There needs to be at least 3 vertices for a triangle
+        for (int v = 0; v < numPoints; v++) //Do this for each resulting area
         {
-            newMesh.triangles = new int[newMesh.vertices.Length*3];
-            for (int j = 1; j <= newMesh.vertices.Length - 2; j++) //The number of triangles is the number of vertices minus 2
+            Mesh newMesh = new Mesh();
+            newMesh.vertices = areaVertexesClean[v].ToArray();
+            int auxVertices = 1;
+            List<int> aux = new List<int>();
+
+            if(newMesh.vertices.Length >= 3) //There needs to be at least 3 vertices for a triangle
             {
-                aux.Add(0);
-                aux.Add(auxVertices++);
-                aux.Add(auxVertices++);
-                auxVertices = j;
+                newMesh.triangles = new int[(newMesh.vertices.Length -2) *3];
+                for (int j = 1; j <= newMesh.vertices.Length - 2; j++) //The number of triangles is the number of vertices minus 2
+                {
+                    aux.Add(0);
+                    aux.Add(auxVertices++);
+                    aux.Add(auxVertices);
+                }
             }
-        }
 
-        newMesh.triangles = aux.ToArray();
+            newMesh.triangles = aux.ToArray();
+
+            for (int i = 0; i < newMesh.vertices.Length; i++)
+            {
+                Debug.Log("Vertice " + i + ": " + newMesh.vertices[i]);
+            }
+
+            for (int i = 0; i < newMesh.triangles.Length; i++)
+            {
+                Debug.Log("Vertice: " + newMesh.triangles[i] + ", Coord: " + newMesh.vertices[newMesh.triangles[i]]);
+            }
+
+            /*Vector3[] vertices = new Vector3[4];
+            vertices[0] = new Vector3(0.0f, 0.0f, 0.0f);
+            vertices[1] = new Vector3(1.0f, 0.0f, 0.0f);
+            vertices[2] = new Vector3(0.0f, 0.0f, 1.0f);
+            vertices[3] = new Vector3(1.0f, 0.0f, 1.0f);
+
+            newMesh.vertices = vertices;
+
+            int[] triangles = new int[6];
+            triangles[0] = 0;
+            triangles[1] = 2;
+            triangles[2] = 1;
+            triangles[3] = 1;
+            triangles[4] = 2;
+            triangles[5] = 3;
         
-        for (int i = 0; i < newMesh.triangles.Length; i++)
-        {
-            Debug.Log(newMesh.triangles[i]);
-        }
+            newMesh.triangles = triangles;
 
-        GameObject a = new GameObject();
-        a.AddComponent<MeshFilter>();
-        a.AddComponent<MeshRenderer>();
-        a.transform.GetComponent<MeshFilter>().mesh = newMesh;
-        //a.AddComponent<MeshCollider>();
-        //}
+            for (int i = 0; i < newMesh.vertices.Length; i++)
+            {
+                Debug.Log("Vertice " + i + ": " + newMesh.vertices[i]);
+            }
+
+            for (int i = 0; i < newMesh.triangles.Length; i++)
+            {
+                Debug.Log("Vertice: " + newMesh.triangles[i] + ", Coord: " + newMesh.vertices[newMesh.triangles[i]]);
+            }
+    */
+            GameObject a = new GameObject();
+            a.AddComponent<MeshFilter>();
+            a.AddComponent<MeshRenderer>();
+            a.transform.GetComponent<MeshFilter>().mesh = newMesh;
+
+            /*Material material = new Material(Shader.Find("Specular"));
+            material.color = regionColors[v];
+
+            a.GetComponent<MeshRenderer>().material = material;*/
+            //a.AddComponent<MeshCollider>();
+        }
     }
 }
