@@ -5,22 +5,22 @@ using UnityEngine;
 using System.Linq;
 using static UnityEditor.Searcher.SearcherWindow.Alignment;
 using UnityEngine.AI;
-using System.IO;
 
-public class VoronoiTexture_v4 : MonoBehaviour {     
+public class VoronoiTexture_v5 : MonoBehaviour {     
 
     [SerializeField] private int size;
     [SerializeField] private int numPoints;
 
     // Array to store pixel colors for the texture
     private Color[] pixelColors;
-    private Color[] regionColors;
+    private Vector3[] points;
 
     //list to store the pixel vertexes
     private List<Vector3>[] areaVertexes;
     List<Vector3>[] areaVertexesClean;
 
     List<Vector3> arrayVertices;
+
 
     private Mesh originalMesh;
 
@@ -40,7 +40,6 @@ public class VoronoiTexture_v4 : MonoBehaviour {
 
         pixelColors = new Color[size * size];
         originalMesh = transform.GetComponent<MeshFilter>().mesh;
-        regionColors = new Color[numPoints];
         arrayVertices = new List<Vector3>();
         CreateVoronoi();
         orderVerticesForNewMesh_v3();
@@ -50,8 +49,8 @@ public class VoronoiTexture_v4 : MonoBehaviour {
     public void CreateVoronoi()
     {
         // Arrays to store Voronoi points and corresponding region colors
-        Vector3[] points = new Vector3[numPoints];
-        
+        points = new Vector3[numPoints];
+        Color[] regionColors = new Color[numPoints];
 
         // Generate random points and colors
         //V3: we supose the order of 'regionColors[]' tells us which point of 'points[]' is assigned to each color area
@@ -135,20 +134,6 @@ public class VoronoiTexture_v4 : MonoBehaviour {
         //{
         //    Debug.Log(areaVertexesClean[i].Count);
         //}
-
-        for (int i = 0; i < areaVertexesClean.Length; i++)
-        {
-            for (int j = 0; j < areaVertexesClean[i].Count - 1; j++)
-            {
-                for (int k = 0; k < areaVertexesClean[i].Count - j -1; k++)
-                    if (areaVertexesClean[i][k].x > areaVertexesClean[i][k + 1].x && areaVertexesClean[i][k].z > areaVertexesClean[i][k + 1].z)
-                    {
-                        var tempVar = areaVertexesClean[i][k];
-                        areaVertexesClean[i][k] = areaVertexesClean[i][k + 1];
-                        areaVertexesClean[i][k + 1] = tempVar;
-                    }
-            }
-        }
 
         //we color the vertexes
         for (int i = 0; i < areaVertexesClean.Length; i++)
@@ -437,32 +422,19 @@ public class VoronoiTexture_v4 : MonoBehaviour {
             newMesh.vertices = areaVertexesClean[0].ToArray();
             int auxVertices = 1;
             List<int> aux = new List<int>();
-        StreamWriter fichero = new StreamWriter("C:\\Users\\User\\UNITY\\ShatterFX\\Assets\\Scripts\\Voronoi_v3\\vertices.txt");
 
-            if(newMesh.vertices.Length >= 3) //There needs to be at least 3 vertices for a triangle
+            if (newMesh.vertices.Length >= 3) //There needs to be at least 3 vertices for a triangle
             {
-                newMesh.triangles = new int[(newMesh.vertices.Length -2) *3];
+                newMesh.triangles = new int[(newMesh.vertices.Length - 2) * 3];
                 for (int j = 1; j <= newMesh.vertices.Length - 2; j++) //The number of triangles is the number of vertices minus 2
                 {
-                    fichero.WriteLine("Vertice 0:" + newMesh.vertices[0] + " Vertice "  + (auxVertices+1) + ":" + " " + newMesh.vertices[auxVertices+1]  + " Vértice " + auxVertices + ":"+ " " + newMesh.vertices[auxVertices]);
                     aux.Add(0);
                     aux.Add(auxVertices++);
                     aux.Add(auxVertices);
-                    
-                    
                 }
-
-             fichero.Close();
-            }
-
-            for (int i = 0; i < newMesh.vertices.Length; i++)
-            {
-                Debug.Log("Vertice " + i + ": " + newMesh.vertices[i]);
             }
 
             newMesh.triangles = aux.ToArray();
-
-
 
             for (int i = 0; i < newMesh.vertices.Length; i++)
             {
@@ -526,7 +498,7 @@ public class VoronoiTexture_v4 : MonoBehaviour {
         List<Vector3[]> listVerticesArea = new List<Vector3[]>();
 
         //array of vertices of an area
-
+  
         Vector3[] auxVertices = areaVertexesClean[0].ToArray();
 
         //1º Hacer la Z media entre la Z máxima y la Z mínima
@@ -534,7 +506,7 @@ public class VoronoiTexture_v4 : MonoBehaviour {
         float minZ = float.MaxValue;
 
         //We calculate max z
-        for (int i = 0; i < auxVertices.Length; i++)
+        for (int i=0; i<auxVertices.Length; i++)
         {
             if (auxVertices[i].z > maxZ)
             {
@@ -549,9 +521,6 @@ public class VoronoiTexture_v4 : MonoBehaviour {
                 minZ = auxVertices[i].z;
             }
         }
-
-        Debug.Log("Max Z: " + maxZ);
-        Debug.Log("Min Z: " + minZ);
 
         float mediumZ = (maxZ + minZ) / 2;
 
@@ -571,8 +540,8 @@ public class VoronoiTexture_v4 : MonoBehaviour {
             }
         }
 
-        //3º Ordenar ambos grupos para que los vértices estén ordenados en sentido horario
-        //COMPROBAR TAMBIÉN LA Z
+        //3º Ordenar ambos grupos para que los vértices etsén ordenados en sentido antihorario
+
         //por debajo --> de mayor a menor
         for (int j = 0; j < bottomVertices.Count - 1; j++)
         {
@@ -598,7 +567,7 @@ public class VoronoiTexture_v4 : MonoBehaviour {
         }
 
         Debug.Log("Orden vértices de arriba:\n");
-        for (int i = 0; i < topVertices.Count; i++)
+        for (int i=0; i< topVertices.Count; i++)
         {
             Debug.Log(topVertices[i]);
         }
@@ -625,11 +594,11 @@ public class VoronoiTexture_v4 : MonoBehaviour {
         Debug.Log("Orden del array");
         for (int i = 0; i < arrayVertices.Count; i++)
         {
-            Debug.Log(arrayVertices[i]);
+            Debug.Log(arrayVertices[i]) ;
         }
 
         //COLOREAMOS PIXELES
-        for (int i = 0; i < arrayVertices.Count; i++)
+        for (int i=0; i<arrayVertices.Count; i++)
         {
             pixelColors[(int)arrayVertices[i].x + (int)arrayVertices[i].z * size] = Color.black;
         }

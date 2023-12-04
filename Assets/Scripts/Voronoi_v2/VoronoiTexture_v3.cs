@@ -147,7 +147,7 @@ public class VoronoiTexture_v3 : MonoBehaviour {
         }
 
         //3º Once we have all the normals, we have to check where they converge
-
+        
         for (int i=0; i < pointsDistances.Count; i++)
         {
             for (int j = 0; j < pointsDistances.Count; j++)
@@ -171,6 +171,8 @@ public class VoronoiTexture_v3 : MonoBehaviour {
                             //if it has the same color as the area of the main point, this intersection point is a vertex of this area
                             if (interPointColor == regionColors[indexArea])
                             {
+
+
                                 //we have to make sure it isn't already in the vertex list
                                 bool alreadyAdded = false;
                                 for (int k = 0; k < vertexes.Count; k++)
