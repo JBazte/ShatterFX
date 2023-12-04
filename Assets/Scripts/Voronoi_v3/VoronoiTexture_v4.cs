@@ -20,7 +20,7 @@ public class VoronoiTexture_v4 : MonoBehaviour {
     private List<Vector3>[] areaVertexes;
     List<Vector3>[] areaVertexesClean;
 
-    List<Vector3> arrayVertices;
+    List<Vector3>[] listVerticesArea;
 
     private Mesh originalMesh;
 
@@ -41,7 +41,13 @@ public class VoronoiTexture_v4 : MonoBehaviour {
         pixelColors = new Color[size * size];
         originalMesh = transform.GetComponent<MeshFilter>().mesh;
         regionColors = new Color[numPoints];
-        arrayVertices = new List<Vector3>();
+        
+        listVerticesArea = new List<Vector3>[numPoints];
+        for (int i = 0; i < numPoints; i++)
+        {
+            listVerticesArea[i] = new List<Vector3>();
+        }
+
         CreateVoronoi();
         orderVerticesForNewMesh_v3();
         breakMesh();
@@ -431,13 +437,14 @@ public class VoronoiTexture_v4 : MonoBehaviour {
 
     private void breakMesh()
     {
-        //for (int v = 0; v < numPoints; v++) //Do this for each resulting area
-        //{
+        for (int v = 0; v < numPoints; v++) //Do this for each resulting area
+        {
             Mesh newMesh = new Mesh();
-            newMesh.vertices = areaVertexesClean[0].ToArray();
+            //newMesh.vertices = areaVertexesClean[0].ToArray();
+            newMesh.vertices = listVerticesArea[v].ToArray();
             int auxVertices = 1;
             List<int> aux = new List<int>();
-        StreamWriter fichero = new StreamWriter("C:\\Users\\User\\UNITY\\ShatterFX\\Assets\\Scripts\\Voronoi_v3\\vertices.txt");
+            StreamWriter fichero = new StreamWriter("C:\\Users\\User\\UNITY\\ShatterFX\\Assets\\Scripts\\Voronoi_v3\\vertices.txt");
 
             if(newMesh.vertices.Length >= 3) //There needs to be at least 3 vertices for a triangle
             {
@@ -512,7 +519,7 @@ public class VoronoiTexture_v4 : MonoBehaviour {
 
             a.GetComponent<MeshRenderer>().material = material;*/
             //a.AddComponent<MeshCollider>();
-        //}
+        }
     }
 
     private void orderVerticesForNewMesh_v3()
@@ -523,124 +530,129 @@ public class VoronoiTexture_v4 : MonoBehaviour {
         //4º Juntarlos
 
         //Por cada área, tenemos que calcular el orden de sus vértices
-        List<Vector3[]> listVerticesArea = new List<Vector3[]>();
+        List<Vector3> arrayVertices;
 
-        //array of vertices of an area
-
-        Vector3[] auxVertices = areaVertexesClean[0].ToArray();
-
-        //1º Hacer la Z media entre la Z máxima y la Z mínima
-        float maxZ = float.MinValue;
-        float minZ = float.MaxValue;
-
-        //We calculate max z
-        for (int i = 0; i < auxVertices.Length; i++)
+        for (int v=0; v < listVerticesArea.Length; v++)
         {
-            if (auxVertices[i].z > maxZ)
+            //array of vertices of an area
+            arrayVertices = new List<Vector3>();
+            Vector3[] auxVertices = areaVertexesClean[v].ToArray();
+
+            //1º Hacer la Z media entre la Z máxima y la Z mínima
+            float maxZ = float.MinValue;
+            float minZ = float.MaxValue;
+
+            //We calculate max z
+            for (int i = 0; i < auxVertices.Length; i++)
             {
-                maxZ = auxVertices[i].z;
-            }
-        }
-        //We calculate min z
-        for (int i = 0; i < auxVertices.Length; i++)
-        {
-            if (auxVertices[i].z < minZ)
-            {
-                minZ = auxVertices[i].z;
-            }
-        }
-
-        Debug.Log("Max Z: " + maxZ);
-        Debug.Log("Min Z: " + minZ);
-
-        float mediumZ = (maxZ + minZ) / 2;
-
-        //2º Hacer 2 grupos de vértices (los que etsán por encima de la Z media y los que están por debajo) y asignar los vértices según sus Z
-        List<Vector3> topVertices = new List<Vector3>();
-        List<Vector3> bottomVertices = new List<Vector3>();
-
-        for (int i = 0; i < auxVertices.Length; i++)
-        {
-            if (auxVertices[i].z > mediumZ)
-            {
-                topVertices.Add(auxVertices[i]);
-            }
-            else if (auxVertices[i].z <= mediumZ)
-            {
-                bottomVertices.Add(auxVertices[i]);
-            }
-        }
-
-        //3º Ordenar ambos grupos para que los vértices estén ordenados en sentido horario
-        //COMPROBAR TAMBIÉN LA Z
-        //por debajo --> de mayor a menor
-        for (int j = 0; j < bottomVertices.Count - 1; j++)
-        {
-            for (int k = 0; k < bottomVertices.Count - j - 1; k++)
-                if (bottomVertices[k].x < bottomVertices[k + 1].x)
+                if (auxVertices[i].z > maxZ)
                 {
-                    var tempVar = bottomVertices[k];
-                    bottomVertices[k] = bottomVertices[k + 1];
-                    bottomVertices[k + 1] = tempVar;
+                    maxZ = auxVertices[i].z;
                 }
-        }
-
-        //por encima--> de menor a mayor
-        for (int j = 0; j < topVertices.Count - 1; j++)
-        {
-            for (int k = 0; k < topVertices.Count - j - 1; k++)
-                if (topVertices[k].x > topVertices[k + 1].x)
+            }
+            //We calculate min z
+            for (int i = 0; i < auxVertices.Length; i++)
+            {
+                if (auxVertices[i].z < minZ)
                 {
-                    var tempVar = topVertices[k];
-                    topVertices[k] = topVertices[k + 1];
-                    topVertices[k + 1] = tempVar;
+                    minZ = auxVertices[i].z;
                 }
-        }
+            }
 
-        Debug.Log("Orden vértices de arriba:\n");
-        for (int i = 0; i < topVertices.Count; i++)
-        {
-            Debug.Log(topVertices[i]);
-        }
-        Debug.Log("Orden vértices de abajo:\n");
-        for (int i = 0; i < bottomVertices.Count; i++)
-        {
-            Debug.Log(bottomVertices[i]);
-        }
+            Debug.Log("Max Z: " + maxZ);
+            Debug.Log("Min Z: " + minZ);
 
-        //4º Juntarlos
-        int indexMainArray = 0;
-        for (int i = 0; i < topVertices.Count; i++)
-        {
-            arrayVertices.Add(topVertices[i]);
-            indexMainArray++;
-        }
+            float mediumZ = (maxZ + minZ) / 2;
 
-        for (int i = 0; i < bottomVertices.Count; i++)
-        {
-            arrayVertices.Add(bottomVertices[i]);
-            indexMainArray++;
-        }
+            //2º Hacer 2 grupos de vértices (los que etsán por encima de la Z media y los que están por debajo) y asignar los vértices según sus Z
+            List<Vector3> topVertices = new List<Vector3>();
+            List<Vector3> bottomVertices = new List<Vector3>();
 
-        Debug.Log("Orden del array");
-        for (int i = 0; i < arrayVertices.Count; i++)
-        {
-            Debug.Log(arrayVertices[i]);
-        }
+            for (int i = 0; i < auxVertices.Length; i++)
+            {
+                if (auxVertices[i].z > mediumZ)
+                {
+                    topVertices.Add(auxVertices[i]);
+                }
+                else if (auxVertices[i].z <= mediumZ)
+                {
+                    bottomVertices.Add(auxVertices[i]);
+                }
+            }
 
-        //COLOREAMOS PIXELES
-        for (int i = 0; i < arrayVertices.Count; i++)
-        {
-            pixelColors[(int)arrayVertices[i].x + (int)arrayVertices[i].z * size] = Color.black;
+            //3º Ordenar ambos grupos para que los vértices estén ordenados en sentido horario
+            //COMPROBAR TAMBIÉN LA Z
+            //por debajo --> de mayor a menor
+            for (int j = 0; j < bottomVertices.Count - 1; j++)
+            {
+                for (int k = 0; k < bottomVertices.Count - j - 1; k++)
+                    if (bottomVertices[k].x < bottomVertices[k + 1].x)
+                    {
+                        var tempVar = bottomVertices[k];
+                        bottomVertices[k] = bottomVertices[k + 1];
+                        bottomVertices[k + 1] = tempVar;
+                    }
+            }
+
+            //por encima--> de menor a mayor
+            for (int j = 0; j < topVertices.Count - 1; j++)
+            {
+                for (int k = 0; k < topVertices.Count - j - 1; k++)
+                    if (topVertices[k].x > topVertices[k + 1].x)
+                    {
+                        var tempVar = topVertices[k];
+                        topVertices[k] = topVertices[k + 1];
+                        topVertices[k + 1] = tempVar;
+                    }
+            }
+
+            Debug.Log("Orden vértices de arriba:\n");
+            for (int i = 0; i < topVertices.Count; i++)
+            {
+                Debug.Log(topVertices[i]);
+            }
+            Debug.Log("Orden vértices de abajo:\n");
+            for (int i = 0; i < bottomVertices.Count; i++)
+            {
+                Debug.Log(bottomVertices[i]);
+            }
+
+            //4º Juntarlos
+            int indexMainArray = 0;
+            for (int i = 0; i < topVertices.Count; i++)
+            {
+                arrayVertices.Add(topVertices[i]);
+                indexMainArray++;
+            }
+
+            for (int i = 0; i < bottomVertices.Count; i++)
+            {
+                arrayVertices.Add(bottomVertices[i]);
+                indexMainArray++;
+            }
+
+            Debug.Log("Orden del array");
+            for (int i = 0; i < arrayVertices.Count; i++)
+            {
+                Debug.Log(arrayVertices[i]);
+            }
+
+           /* //COLOREAMOS PIXELES
+            for (int i = 0; i < arrayVertices.Count; i++)
+            {
+                pixelColors[(int)arrayVertices[i].x + (int)arrayVertices[i].z * size] = Color.black;
+            }*/
+
+            listVerticesArea[v] = arrayVertices;
         }
 
         //PROVISIONAL, PARA VISUALIZARLO MEJOR
         // Create and apply the texture to the GameObject's material
-        Texture2D texture = new Texture2D(size, size);
+       /* Texture2D texture = new Texture2D(size, size);
         texture.SetPixels(pixelColors);
         texture.Apply();
 
-        GetComponent<Renderer>().material.mainTexture = texture;
+        GetComponent<Renderer>().material.mainTexture = texture;*/
 
     }
 }
