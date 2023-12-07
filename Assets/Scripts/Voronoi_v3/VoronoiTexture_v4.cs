@@ -11,6 +11,7 @@ public class VoronoiTexture_v4 : MonoBehaviour {
 
     [SerializeField] private int size;
     [SerializeField] private int numPoints;
+    [SerializeField] private Material material;
 
     // Array to store pixel colors for the texture
     private Color[] pixelColors;
@@ -422,9 +423,9 @@ public class VoronoiTexture_v4 : MonoBehaviour {
 
     /*
     Mesh: 
-        Vector3[] vertices (have them)
-        Vector3[] uvs (not important)
-        int[] triangles (how to get them?)
+        Vector3[] vertices
+        Vector3[] uvs
+        int[] triangles
     
     To do:
         Get vertices of each shape
@@ -440,38 +441,28 @@ public class VoronoiTexture_v4 : MonoBehaviour {
         for (int v = 0; v < numPoints; v++) //Do this for each resulting area
         {
             Mesh newMesh = new Mesh();
-            //newMesh.vertices = areaVertexesClean[0].ToArray();
+            newMesh.name = "mesh_" + v;
             newMesh.vertices = listVerticesArea[v].ToArray();
             int auxVertices = 1;
             List<int> aux = new List<int>();
-            StreamWriter fichero = new StreamWriter("C:\\Users\\User\\UNITY\\ShatterFX\\Assets\\Scripts\\Voronoi_v3\\vertices.txt");
+            //StreamWriter fichero = new StreamWriter("C:\\Users\\User\\UNITY\\ShatterFX\\Assets\\Scripts\\Voronoi_v3\\vertices.txt");
 
             if(newMesh.vertices.Length >= 3) //There needs to be at least 3 vertices for a triangle
             {
-                newMesh.triangles = new int[(newMesh.vertices.Length -2) *3];
+                newMesh.triangles = new int[(newMesh.vertices.Length - 2) * 6];
                 for (int j = 1; j <= newMesh.vertices.Length - 2; j++) //The number of triangles is the number of vertices minus 2
                 {
-                    fichero.WriteLine("Vertice 0:" + newMesh.vertices[0] + " Vertice "  + (auxVertices+1) + ":" + " " + newMesh.vertices[auxVertices+1]  + " Vértice " + auxVertices + ":"+ " " + newMesh.vertices[auxVertices]);
+                    //fichero.WriteLine("Vertice 0:" + newMesh.vertices[0] + " Vertice "  + (auxVertices+1) + ":" + " " + newMesh.vertices[auxVertices+1]  + " Vértice " + auxVertices + ":"+ " " + newMesh.vertices[auxVertices]);
                     aux.Add(0);
                     aux.Add(auxVertices++);
                     aux.Add(auxVertices);
-                    
-                    
                 }
-
-             fichero.Close();
-            }
-
-            for (int i = 0; i < newMesh.vertices.Length; i++)
-            {
-                Debug.Log("Vertice " + i + ": " + newMesh.vertices[i]);
+                //fichero.Close();
             }
 
             newMesh.triangles = aux.ToArray();
 
-
-
-            for (int i = 0; i < newMesh.vertices.Length; i++)
+            /*for (int i = 0; i < newMesh.vertices.Length; i++)
             {
                 Debug.Log("Vertice " + i + ": " + newMesh.vertices[i]);
             }
@@ -479,46 +470,20 @@ public class VoronoiTexture_v4 : MonoBehaviour {
             for (int i = 0; i < newMesh.triangles.Length; i++)
             {
                 Debug.Log("Vertice: " + newMesh.triangles[i] + ", Coord: " + newMesh.vertices[newMesh.triangles[i]]);
-            }
+            }*/
 
-            /*Vector3[] vertices = new Vector3[4];
-            vertices[0] = new Vector3(0.0f, 0.0f, 0.0f);
-            vertices[1] = new Vector3(1.0f, 0.0f, 0.0f);
-            vertices[2] = new Vector3(0.0f, 0.0f, 1.0f);
-            vertices[3] = new Vector3(1.0f, 0.0f, 1.0f);
-
-            newMesh.vertices = vertices;
-
-            int[] triangles = new int[6];
-            triangles[0] = 0;
-            triangles[1] = 2;
-            triangles[2] = 1;
-            triangles[3] = 1;
-            triangles[4] = 2;
-            triangles[5] = 3;
-        
-            newMesh.triangles = triangles;
-
-            for (int i = 0; i < newMesh.vertices.Length; i++)
-            {
-                Debug.Log("Vertice " + i + ": " + newMesh.vertices[i]);
-            }
-
-            for (int i = 0; i < newMesh.triangles.Length; i++)
-            {
-                Debug.Log("Vertice: " + newMesh.triangles[i] + ", Coord: " + newMesh.vertices[newMesh.triangles[i]]);
-            }
-    */
-            GameObject a = new GameObject();
+            GameObject a = new GameObject(name = "piece_" + v);
             a.AddComponent<MeshFilter>();
             a.AddComponent<MeshRenderer>();
             a.transform.GetComponent<MeshFilter>().mesh = newMesh;
 
-            /*Material material = new Material(Shader.Find("Specular"));
-            material.color = regionColors[v];
+            a.transform.localScale = new Vector3 (0.01245685f, 0.01245685f, 0.01245685f);
+            a.transform.rotation = Quaternion.Euler(90, 0, -45);
 
-            a.GetComponent<MeshRenderer>().material = material;*/
-            //a.AddComponent<MeshCollider>();
+            a.GetComponent<MeshRenderer>().material = material;
+            a.AddComponent<MeshCollider>();
+            a.GetComponent<MeshCollider>().convex = true;
+            a.AddComponent<Rigidbody>();
         }
     }
 
@@ -656,3 +621,5 @@ public class VoronoiTexture_v4 : MonoBehaviour {
 
     }
 }
+//Vector3(0.551999927,-0.795000017,-0.556999922) -- Vector3(270,135,90)
+//Vector3(0.551999986,-2.4690001,-0.556999981)
