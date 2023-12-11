@@ -5,24 +5,23 @@ using UnityEngine;
 using System.Linq;
 using static UnityEditor.Searcher.SearcherWindow.Alignment;
 using UnityEngine.AI;
+using System.IO;
 
-public class VoronoiTexture_v5 : MonoBehaviour {     
+public class VoronoiTexture_v5 : MonoBehaviour {
 
     [SerializeField] private int size;
     [SerializeField] private int numPoints;
+    [SerializeField] private Material material;
 
     // Array to store pixel colors for the texture
     private Color[] pixelColors;
-    private Vector3[] points;
+    private Color[] regionColors;
 
-    //list to store the pixel vertexes
+    // List to store the pixel vertexes
     private List<Vector3>[] areaVertexes;
     List<Vector3>[] areaVertexesClean;
 
-    List<Vector3> arrayVertices;
-
-
-    private Mesh originalMesh;
+    List<Vector3>[] listVerticesArea;
 
     void Start()
     {
@@ -39,18 +38,19 @@ public class VoronoiTexture_v5 : MonoBehaviour {
         }
 
         pixelColors = new Color[size * size];
-        originalMesh = transform.GetComponent<MeshFilter>().mesh;
-        arrayVertices = new List<Vector3>();
-        CreateVoronoi();
-        orderVerticesForNewMesh_v3();
-        breakMesh();
+        regionColors = new Color[numPoints];
+        
+        listVerticesArea = new List<Vector3>[numPoints];
+        for (int i = 0; i < numPoints; i++)
+        {
+            listVerticesArea[i] = new List<Vector3>();
+        }
     }
 
     public void CreateVoronoi()
     {
         // Arrays to store Voronoi points and corresponding region colors
-        points = new Vector3[numPoints];
-        Color[] regionColors = new Color[numPoints];
+        Vector3[] points = new Vector3[numPoints];
 
         // Generate random points and colors
         //V3: we supose the order of 'regionColors[]' tells us which point of 'points[]' is assigned to each color area
@@ -95,16 +95,16 @@ public class VoronoiTexture_v5 : MonoBehaviour {
             pixelColors[x + z * size] = Color.black;
         }
 
-        //We check the vertex of each area
-         for (int i=0; i<points.Length; i++)
+        // We check the vertex of each area
+         for (int i = 0; i < points.Length; i++)
          {
              checkVertexes(points, i, regionColors);
          }
 
-        //we'll add to the vertexes array the corners of the plane
+        // We'll add to the vertexes array the corners of the plane
         AddCorners(pixelColors, regionColors);
 
-        //We remove the duplicate values of every list for each area
+        // We remove the duplicate values of every list for each area
         bool isIn = false;
         for (int i = 0; i < numPoints; i++)
         {
@@ -119,36 +119,30 @@ public class VoronoiTexture_v5 : MonoBehaviour {
                         isIn = true;
                     }
                 }
-
                 if(!isIn)
                 {
                     aux.Add(areaVertexes[i][j]);
-                    //Debug.Log(areaVertexes[i][j]);
                 }
             }
             areaVertexesClean[i] = aux;
-            //Debug.Log("num " + i + ": " +  aux.Count);
         }
 
-        //for (int i = 0; i < areaVertexesClean.Length; i++)
-        //{
-        //    Debug.Log(areaVertexesClean[i].Count);
-        //}
-
-        //we color the vertexes
+        // We provisionally organize the vertices 
         for (int i = 0; i < areaVertexesClean.Length; i++)
         {
-            for (int j = 0; j < areaVertexesClean[i].Count; j++)
+            for (int j = 0; j < areaVertexesClean[i].Count - 1; j++)
             {
-                //Debug.Log(ColorUtility.ToHtmlStringRGB(regionColors[i]) + ": " + areaVertexesClean[i][j]);
-                int x = (int)areaVertexesClean[i][j].x;
-                int z = (int)areaVertexesClean[i][j].z;
-                pixelColors[x + z * size] = Color.cyan;
+                for (int k = 0; k < areaVertexesClean[i].Count - j - 1; k++)
+                {
+                    if (areaVertexesClean[i][k].x > areaVertexesClean[i][k + 1].x && areaVertexesClean[i][k].z > areaVertexesClean[i][k + 1].z)
+                    {
+                        var tempVar = areaVertexesClean[i][k];
+                        areaVertexesClean[i][k] = areaVertexesClean[i][k + 1];
+                        areaVertexesClean[i][k + 1] = tempVar;
+                    }
+                }
             }
         }
-
-        //we color de (0,0) red
-        pixelColors[0 + 0 * size] = Color.red;
 
         // Create and apply the texture to the GameObject's material
         Texture2D texture = new Texture2D(size, size);
@@ -156,81 +150,78 @@ public class VoronoiTexture_v5 : MonoBehaviour {
         texture.Apply();
 
         GetComponent<Renderer>().material.mainTexture = texture;
-
-        Debug.Log(ColorUtility.ToHtmlStringRGB(regionColors[0]) + " " + areaVertexesClean[0].Count);
     }
 
     private void checkVertexes(Vector3[] points, int indexArea, Color[] regionColors)
     {
 
         //We'll use ecuations of the line, normal lines and intersection points to find the vertexes in which different area colors converge
-
         //We'll check the vertexes of an specific area
         Vector3 actualPoint = points[indexArea];
+
         //We use a dictionary to store the distance between the main point and the others
         Dictionary<Vector3, float> pointsDistances = new Dictionary<Vector3, float>();
 
-        //auxiliar arrays to store the variables of each the normal line ecuation 
+        // Auxiliary arrays to store the variables of each the normal line ecuations 
         float[] mNormals = new float[points.Length - 1];
         float[] bNormals = new float[points.Length - 1]; 
         int indexPoints = 0;
 
-        //1º We calculate the distance between the point and the others
-        for (int i=0; i<points.Length; i++)
+        // 1º We calculate the distance between the main point and the others
+        for (int i = 0; i < points.Length; i++)
         {
             if (i != indexArea)
             {
-                pointsDistances.Add(points[i],Vector3.Distance(actualPoint, points[i]));
+                pointsDistances.Add(points[i], Vector3.Distance(actualPoint, points[i]));
             }
-            
         }
 
-        //We order it from min to max distance value (Value)
+        // We order it from min to max distance value (Value)
         pointsDistances = pointsDistances.OrderBy(kvp => kvp.Value).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
-        //2º From shorter to longer distance, we find the normal line to each pair of points
+        // 2º From shorter to longer distance, we find the normal line to each pair of points
         foreach (var kvp in pointsDistances){
 
-            //Calculate the slope of the line, and the normal
+            // Calculate the slope of the line, and the normal
             float m = (kvp.Key.z - actualPoint.z) / (kvp.Key.x - actualPoint.x);
             float mNormal = -1 / m;
 
-            //we use the middle point of the line to find the normal line ecuation
-            Vector3 middlePoint = new Vector3((actualPoint.x + kvp.Key.x)/2, 0, (actualPoint.z + kvp.Key.z) / 2);
+            // We use the middle point of the line to find the normal line ecuation
+            Vector3 middlePoint = new Vector3((actualPoint.x + kvp.Key.x) / 2, 0, (actualPoint.z + kvp.Key.z) / 2);
             float bNormal = middlePoint.z - mNormal * middlePoint.x;
 
-            //We store the variables of the normal ecuations, the indexPoint tells us of which point
+            // We store the variables of the normal ecuations, the indexPoint tells us which point they belong to
             mNormals[indexPoints] = mNormal;
             bNormals[indexPoints] = bNormal;
 
             indexPoints++;
         }
 
-        //3º Once we have all the normals, we have to check where they converge
+        // 3º Once we have all the normals, we check where they converge
         int indexI = 0;
         int indexJ = 0;
+
         foreach (var i in pointsDistances)
         {
-            //For each line ecuation we'll compare with the borders (also line ecuations)
+            // For each line ecuation we'll compare with the borders (also line ecuations)
             foreach (var j in pointsDistances)
             {
-                //We'll not compare the same line
-                if (indexI!=indexJ)
+                // We won't compare the same line with itself
+                if (indexI != indexJ)
                 {
-                    //First we check if they aren't parallel lines
+                    // First we check that they aren't parallel lines
                     if (mNormals[indexI] != mNormals[indexJ])
                     {
-                        //Then we calculate the intersection point of both line ecuations
+                        // Then we calculate the intersection point of both line ecuations
                         Vector3 intersectionPoint = CalculateIntersectionPoint(mNormals[indexI], bNormals[indexI], mNormals[indexJ], bNormals[indexJ]);
 
-                        //We have to make sure that the intersection point is within the bounds of the plane size * size
+                        // We have to make sure that the intersection point is within the bounds of the plane size * size
                         if (intersectionPoint.x <= size && intersectionPoint.z <= size && intersectionPoint.x >=0 && intersectionPoint.z >= 0)
                         {
-                            
-                            //see of which color is the intersection point
+                            // We check the color of the intersection point
                             Color interPointColor = pixelColors[(int)intersectionPoint.x + (int)intersectionPoint.z * size];
 
-                            //if it has the same color as the area of the main point, this intersection point is a vertex of this area
+                            // If it is the same color as the main point's area, the intersection point is a vertex of said area
                             if (interPointColor == regionColors[indexArea])
                             {
                                 Vector3 pointA = i.Key;
@@ -263,68 +254,63 @@ public class VoronoiTexture_v5 : MonoBehaviour {
             indexJ = 0;
         }
 
-
-
-        //4º We do the same but with the limits of the plane
-
+        // 4º We do the same but with the limits of the plane
         List<float> limitLines = new List<float>();
-        //impar: x   par: y
-        limitLines.Add(0);
-        limitLines.Add(0);
-        limitLines.Add(size-1);
-        limitLines.Add(size-1);
 
         //We'll add the limits of the plane, 4 in this case
-
         /*
-         A                  B
-         --------------------
-         |                  |
-         |                  |
-         |                  |
-         |                  |
-         |                  |
-         |                  |
-         |                  |
-         |                  |
-         --------------------
-         C                  D
+            A                  B
+            --------------------
+            |                  |
+            |                  |
+            |                  |
+            |                  |
+            |                  |
+            |                  |
+            |                  |
+            |                  |
+            --------------------
+            C                  D
          
 
-         Recta CA: x = 0   
-         Recta AB: y = size - 1
-         Recta CD: y = 0
-         Recta DB: x = size - 1 */
+            Recta CA: x = 0   
+            Recta AB: y = size - 1
+            Recta CD: y = 0
+            Recta DB: x = size - 1
+        */
+
+        // impar: x   par: y
+        limitLines.Add(0);
+        limitLines.Add(0);
+        limitLines.Add(size-1);
+        limitLines.Add(size-1);
+
         indexI = 0;
         foreach (var i in pointsDistances)
         {
-            //For each line ecuation we'll compare with the borders (also line ecuations)
-            for(int j = 0; j < limitLines.Count; j++)
+            // For each line ecuation we'll compare with the borders (also line ecuations)
+            for (int j = 0; j < limitLines.Count; j++)
             {
                 if (mNormals[indexI] != limitLines[j])
                 {
                     Vector3 intersectionPoint = new Vector3(0, 0, 0);
 
-                    //impar: x   par: y
+                    // impar: x   par: y
                     if (j % 2 == 0)
                     {
                         intersectionPoint = CalculateHorizontalLines(mNormals[indexI], bNormals[indexI], limitLines[j]);
-
                     }
                     else
                     {
                         intersectionPoint = CalculateVerticalLines(mNormals[indexI], bNormals[indexI], limitLines[j]);
                     }
 
-
-
                     if (intersectionPoint.x < size && intersectionPoint.z < size && intersectionPoint.x >= 0 && intersectionPoint.z >= 0)
                     {
-                        //Debug.Log(intersectionPoint);
-                        //see of which color is the intersection point
+                        // We check the color of the intersection point
                         Color interPointColor = pixelColors[(int)intersectionPoint.x + (int)intersectionPoint.z * size];
 
-                        //if it has the same color as the area of the main point, this intersection point is a vertex of this area
+                        // If it is the same color as the main point's area, this intersection point is a vertex of said area
                         if (interPointColor == regionColors[indexArea])
                         {
                             Vector3 pointA = i.Key;
@@ -337,7 +323,6 @@ public class VoronoiTexture_v5 : MonoBehaviour {
                                     indexAinPoints = k;
                                 }
                             }
-
                             areaVertexes[indexArea].Add(intersectionPoint);
                             areaVertexes[indexAinPoints].Add(intersectionPoint);
                         }
@@ -374,242 +359,196 @@ public class VoronoiTexture_v5 : MonoBehaviour {
 
     private void AddCorners(Color[] pixelColors, Color[] regionColors)
     {
+        // For each of the colors, we check if the corner is the same color as its area
         for (int i = 0; i < regionColors.Length; i++)
-        { //x + z * size
-            if (pixelColors[0] == regionColors[i]) //x=0, z=0
+        { // x + z * size
+            //If it is, we add the corner to that area's vertexes
+            if (pixelColors[0] == regionColors[i]) // x = 0, z = 0
             {
                 areaVertexes[i].Add(new Vector3(0, 0, 0));
             }
-            else if (pixelColors[size - 1] == regionColors[i]) //x=size - 1, z=0
+            else if (pixelColors[size - 1] == regionColors[i]) // x = size - 1, z = 0
             {
                 areaVertexes[i].Add(new Vector3(size - 1, 0, 0));
             }
-            else if (pixelColors[(size - 1) * size] == regionColors[i]) //x=0, z=size - 1
+            else if (pixelColors[(size - 1) * size] == regionColors[i]) // x = 0, z = size - 1
             {
                 areaVertexes[i].Add(new Vector3(0, 0, size - 1));
             }
-            else if (pixelColors[size - 1 + (size - 1) * size] == regionColors[i]) //x=size - 1, z=size - 1
+            else if (pixelColors[size - 1 + (size - 1) * size] == regionColors[i]) // x = size - 1, z = size - 1
             {
                 areaVertexes[i].Add(new Vector3(size - 1, 0, size - 1));
             }
         }
-        
-        
-        
     }
 
+    private void orderVerticesForNewMesh()
+    {
+        // Por cada área, tenemos que calcular el orden de sus vértices
+        List<Vector3> arrayVertices;
 
-    /*
-    Mesh: 
-        Vector3[] vertices (have them)
-        Vector3[] uvs (not important)
-        int[] triangles (how to get them?)
-    
-    To do:
-        Get vertices of each shape
-        For each shape:
-        - Save the original mesh
-        - Create a mesh from the given vertices --> organize the vertices into triangles (3 vert, 1 tri, 0 1 2; 4 vert, 2 tri, 0 1 2 0 2 3; 5 vert, 3 tri, 0 1 2 0 2 3 0 3 4)
-        - Create a gameObject with the new mesh
-        - Cut the shape from the original mesh or maybe just deactivate it once done
-     */
+        for (int v = 0; v < listVerticesArea.Length; v++)
+        {
+            // Array of vertices of an area
+            arrayVertices = new List<Vector3>();
+            Vector3[] auxVertices = areaVertexesClean[v].ToArray();
+
+            // 1º Hacer la Z media entre la Z máxima y la Z mínima
+            float maxZ = float.MinValue;
+            float minZ = float.MaxValue;
+
+            // We calculate max z
+            for (int i = 0; i < auxVertices.Length; i++)
+            {
+                if (auxVertices[i].z > maxZ)
+                {
+                    maxZ = auxVertices[i].z;
+                }
+            }
+            // We calculate min z
+            for (int i = 0; i < auxVertices.Length; i++)
+            {
+                if (auxVertices[i].z < minZ)
+                {
+                    minZ = auxVertices[i].z;
+                }
+            }
+            float mediumZ = (maxZ + minZ) / 2;
+
+            // 2º Hacer 2 grupos de vértices (los que etsán por encima de la Z media y los que están por debajo) y asignar los vértices según sus Z
+            List<Vector3> topVertices = new List<Vector3>();
+            List<Vector3> bottomVertices = new List<Vector3>();
+
+            for (int i = 0; i < auxVertices.Length; i++)
+            {
+                if (auxVertices[i].z > mediumZ)
+                {
+                    topVertices.Add(auxVertices[i]);
+                }
+                else if (auxVertices[i].z <= mediumZ)
+                {
+                    bottomVertices.Add(auxVertices[i]);
+                }
+            }
+
+            // 3º Ordenar ambos grupos para que los vértices estén ordenados en sentido horario
+            // COMPROBAR TAMBIÉN LA Z
+            // por debajo --> de mayor a menor
+            for (int j = 0; j < bottomVertices.Count - 1; j++)
+            {
+                for (int k = 0; k < bottomVertices.Count - j - 1; k++)
+                {
+                    if (bottomVertices[k].x < bottomVertices[k + 1].x)
+                    {
+                        var tempVar = bottomVertices[k];
+                        bottomVertices[k] = bottomVertices[k + 1];
+                        bottomVertices[k + 1] = tempVar;
+                    }
+                }
+            }
+
+            // por encima --> de menor a mayor
+            for (int j = 0; j < topVertices.Count - 1; j++)
+            {
+                for (int k = 0; k < topVertices.Count - j - 1; k++)
+                {
+                    if (topVertices[k].x > topVertices[k + 1].x)
+                    {
+                        var tempVar = topVertices[k];
+                        topVertices[k] = topVertices[k + 1];
+                        topVertices[k + 1] = tempVar;
+                    }
+                }
+            }
+
+            // 4º Juntarlos
+            int indexMainArray = 0;
+            for (int i = 0; i < topVertices.Count; i++)
+            {
+                arrayVertices.Add(topVertices[i]);
+                indexMainArray++;
+            }
+
+            for (int i = 0; i < bottomVertices.Count; i++)
+            {
+                arrayVertices.Add(bottomVertices[i]);
+                indexMainArray++;
+            }
+
+            listVerticesArea[v] = arrayVertices;
+        }
+    }
 
     private void breakMesh()
     {
-        //for (int v = 0; v < numPoints; v++) //Do this for each resulting area
-        //{
+        /*
+        A mesh is composed of an array of Vector3 for vertices and array of integers for the triangles
+        
+        Mesh: 
+            Vector3[] vertices
+            int[] triangles
+        */
+
+        for (int v = 0; v < numPoints; v++)
+        {
+            // For each of the points we create a mesh
             Mesh newMesh = new Mesh();
-            newMesh.vertices = areaVertexesClean[0].ToArray();
+            newMesh.name = "mesh_" + v;
+
+            // We get the the vertices from the listVerticesArea, that has been previously cleaned and organized
+            newMesh.vertices = listVerticesArea[v].ToArray();
+
             int auxVertices = 1;
             List<int> aux = new List<int>();
 
-            if (newMesh.vertices.Length >= 3) //There needs to be at least 3 vertices for a triangle
+            // If there are at least 3 vertices, which should always be true, we start to create triangles
+            if (newMesh.vertices.Length >= 3)
             {
-                newMesh.triangles = new int[(newMesh.vertices.Length - 2) * 3];
-                for (int j = 1; j <= newMesh.vertices.Length - 2; j++) //The number of triangles is the number of vertices minus 2
+                // The number of triangles is the ammount of vertices minus two
+                newMesh.triangles = new int[(newMesh.vertices.Length - 2) * 6];
+
+                for (int j = 1; j <= newMesh.vertices.Length - 2; j++)  
                 {
+                    // As the vertices are already organized, we pivot from the first one like this: (0 1 2), (0 2 3), ...
                     aux.Add(0);
                     aux.Add(auxVertices++);
                     aux.Add(auxVertices);
                 }
             }
-
             newMesh.triangles = aux.ToArray();
 
-            for (int i = 0; i < newMesh.vertices.Length; i++)
-            {
-                Debug.Log("Vertice " + i + ": " + newMesh.vertices[i]);
-            }
+            //Create a gameobject for each of the resulting pieces
+            GameObject piece = new GameObject(name = "piece_" + v);
 
-            for (int i = 0; i < newMesh.triangles.Length; i++)
-            {
-                Debug.Log("Vertice: " + newMesh.triangles[i] + ", Coord: " + newMesh.vertices[newMesh.triangles[i]]);
-            }
+            //Add the generated mesh and a glass-like material to the piece
+            piece.AddComponent<MeshFilter>();
+            piece.AddComponent<MeshRenderer>();
+            piece.GetComponent<MeshFilter>().mesh = newMesh;
+            piece.GetComponent<MeshRenderer>().material = material;
 
-            /*Vector3[] vertices = new Vector3[4];
-            vertices[0] = new Vector3(0.0f, 0.0f, 0.0f);
-            vertices[1] = new Vector3(1.0f, 0.0f, 0.0f);
-            vertices[2] = new Vector3(0.0f, 0.0f, 1.0f);
-            vertices[3] = new Vector3(1.0f, 0.0f, 1.0f);
+            //Adjust the position and the scale of the piece
+            piece.transform.position = new Vector3(0, -0.75f, 0);
+            piece.transform.localScale = new Vector3 (0.00315f, 0.00315f, 0.00315f); //Adjusted to size = 512
+            piece.transform.rotation = Quaternion.Euler(90, 0, -45);
 
-            newMesh.vertices = vertices;
-
-            int[] triangles = new int[6];
-            triangles[0] = 0;
-            triangles[1] = 2;
-            triangles[2] = 1;
-            triangles[3] = 1;
-            triangles[4] = 2;
-            triangles[5] = 3;
-        
-            newMesh.triangles = triangles;
-
-            for (int i = 0; i < newMesh.vertices.Length; i++)
-            {
-                Debug.Log("Vertice " + i + ": " + newMesh.vertices[i]);
-            }
-
-            for (int i = 0; i < newMesh.triangles.Length; i++)
-            {
-                Debug.Log("Vertice: " + newMesh.triangles[i] + ", Coord: " + newMesh.vertices[newMesh.triangles[i]]);
-            }
-    */
-            GameObject a = new GameObject();
-            a.AddComponent<MeshFilter>();
-            a.AddComponent<MeshRenderer>();
-            a.transform.GetComponent<MeshFilter>().mesh = newMesh;
-
-            /*Material material = new Material(Shader.Find("Specular"));
-            material.color = regionColors[v];
-
-            a.GetComponent<MeshRenderer>().material = material;*/
-            //a.AddComponent<MeshCollider>();
-        //}
+            //Add the physics elements so that it has a weight and a collider
+            piece.AddComponent<MeshCollider>();
+            piece.GetComponent<MeshCollider>().convex = true;
+            piece.AddComponent<Rigidbody>();
+            piece.GetComponent<Rigidbody>().velocity = GetComponent<Rigidbody>().velocity;
+        }
     }
 
-    private void orderVerticesForNewMesh_v3()
+    private void OnTriggerEnter(Collider other)
     {
-        //1º Hacer la Z media entre la Z máxima y la Z mínima
-        //2º Hacer 2 grupos de vértices (los que etsán por encima de la Z media y los que están por debajo) y asignar los vértices según sus Z
-        //3º Ordenar ambos grupos para que los vértices etsén ordenados en sentido antihorario (por encima--> de mayor a menor; por debajo --> de menor a mayor)
-        //4º Juntarlos
-
-        //Por cada área, tenemos que calcular el orden de sus vértices
-        List<Vector3[]> listVerticesArea = new List<Vector3[]>();
-
-        //array of vertices of an area
-  
-        Vector3[] auxVertices = areaVertexesClean[0].ToArray();
-
-        //1º Hacer la Z media entre la Z máxima y la Z mínima
-        float maxZ = float.MinValue;
-        float minZ = float.MaxValue;
-
-        //We calculate max z
-        for (int i=0; i<auxVertices.Length; i++)
+        // If the plane has collided with the floor, we "break" it
+        if (other.tag == "Suelo")
         {
-            if (auxVertices[i].z > maxZ)
-            {
-                maxZ = auxVertices[i].z;
-            }
+            CreateVoronoi();
+            orderVerticesForNewMesh();
+            breakMesh();
+            this.gameObject.SetActive(false);
+            Debug.Log("End");
         }
-        //We calculate min z
-        for (int i = 0; i < auxVertices.Length; i++)
-        {
-            if (auxVertices[i].z < minZ)
-            {
-                minZ = auxVertices[i].z;
-            }
-        }
-
-        float mediumZ = (maxZ + minZ) / 2;
-
-        //2º Hacer 2 grupos de vértices (los que etsán por encima de la Z media y los que están por debajo) y asignar los vértices según sus Z
-        List<Vector3> topVertices = new List<Vector3>();
-        List<Vector3> bottomVertices = new List<Vector3>();
-
-        for (int i = 0; i < auxVertices.Length; i++)
-        {
-            if (auxVertices[i].z > mediumZ)
-            {
-                topVertices.Add(auxVertices[i]);
-            }
-            else if (auxVertices[i].z <= mediumZ)
-            {
-                bottomVertices.Add(auxVertices[i]);
-            }
-        }
-
-        //3º Ordenar ambos grupos para que los vértices etsén ordenados en sentido antihorario
-
-        //por debajo --> de mayor a menor
-        for (int j = 0; j < bottomVertices.Count - 1; j++)
-        {
-            for (int k = 0; k < bottomVertices.Count - j - 1; k++)
-                if (bottomVertices[k].x < bottomVertices[k + 1].x)
-                {
-                    var tempVar = bottomVertices[k];
-                    bottomVertices[k] = bottomVertices[k + 1];
-                    bottomVertices[k + 1] = tempVar;
-                }
-        }
-
-        //por encima--> de menor a mayor
-        for (int j = 0; j < topVertices.Count - 1; j++)
-        {
-            for (int k = 0; k < topVertices.Count - j - 1; k++)
-                if (topVertices[k].x > topVertices[k + 1].x)
-                {
-                    var tempVar = topVertices[k];
-                    topVertices[k] = topVertices[k + 1];
-                    topVertices[k + 1] = tempVar;
-                }
-        }
-
-        Debug.Log("Orden vértices de arriba:\n");
-        for (int i=0; i< topVertices.Count; i++)
-        {
-            Debug.Log(topVertices[i]);
-        }
-        Debug.Log("Orden vértices de abajo:\n");
-        for (int i = 0; i < bottomVertices.Count; i++)
-        {
-            Debug.Log(bottomVertices[i]);
-        }
-
-        //4º Juntarlos
-        int indexMainArray = 0;
-        for (int i = 0; i < topVertices.Count; i++)
-        {
-            arrayVertices.Add(topVertices[i]);
-            indexMainArray++;
-        }
-
-        for (int i = 0; i < bottomVertices.Count; i++)
-        {
-            arrayVertices.Add(bottomVertices[i]);
-            indexMainArray++;
-        }
-
-        Debug.Log("Orden del array");
-        for (int i = 0; i < arrayVertices.Count; i++)
-        {
-            Debug.Log(arrayVertices[i]) ;
-        }
-
-        //COLOREAMOS PIXELES
-        for (int i=0; i<arrayVertices.Count; i++)
-        {
-            pixelColors[(int)arrayVertices[i].x + (int)arrayVertices[i].z * size] = Color.black;
-        }
-
-        //PROVISIONAL, PARA VISUALIZARLO MEJOR
-        // Create and apply the texture to the GameObject's material
-        Texture2D texture = new Texture2D(size, size);
-        texture.SetPixels(pixelColors);
-        texture.Apply();
-
-        GetComponent<Renderer>().material.mainTexture = texture;
-
     }
 }

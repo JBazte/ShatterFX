@@ -7,7 +7,7 @@ using static UnityEditor.Searcher.SearcherWindow.Alignment;
 using UnityEngine.AI;
 using System.IO;
 
-public class VoronoiTexture_v4 : MonoBehaviour {     
+public class VoronoiTexture_v4 : MonoBehaviour {
 
     [SerializeField] private int size;
     [SerializeField] private int numPoints;
@@ -17,13 +17,11 @@ public class VoronoiTexture_v4 : MonoBehaviour {
     private Color[] pixelColors;
     private Color[] regionColors;
 
-    //list to store the pixel vertexes
+    // List to store the pixel vertexes
     private List<Vector3>[] areaVertexes;
     List<Vector3>[] areaVertexesClean;
 
     List<Vector3>[] listVerticesArea;
-
-    private Mesh originalMesh;
 
     void Start()
     {
@@ -40,7 +38,6 @@ public class VoronoiTexture_v4 : MonoBehaviour {
         }
 
         pixelColors = new Color[size * size];
-        originalMesh = transform.GetComponent<MeshFilter>().mesh;
         regionColors = new Color[numPoints];
         
         listVerticesArea = new List<Vector3>[numPoints];
@@ -48,17 +45,12 @@ public class VoronoiTexture_v4 : MonoBehaviour {
         {
             listVerticesArea[i] = new List<Vector3>();
         }
-
-        CreateVoronoi();
-        orderVerticesForNewMesh_v3();
-        breakMesh();
     }
 
     public void CreateVoronoi()
     {
         // Arrays to store Voronoi points and corresponding region colors
         Vector3[] points = new Vector3[numPoints];
-        
 
         // Generate random points and colors
         //V3: we supose the order of 'regionColors[]' tells us which point of 'points[]' is assigned to each color area
@@ -103,16 +95,16 @@ public class VoronoiTexture_v4 : MonoBehaviour {
             pixelColors[x + z * size] = Color.black;
         }
 
-        //We check the vertex of each area
-         for (int i=0; i<points.Length; i++)
+        // We check the vertex of each area
+         for (int i = 0; i < points.Length; i++)
          {
              checkVertexes(points, i, regionColors);
          }
 
-        //we'll add to the vertexes array the corners of the plane
+        // We'll add to the vertexes array the corners of the plane
         AddCorners(pixelColors, regionColors);
 
-        //We remove the duplicate values of every list for each area
+        // We remove the duplicate values of every list for each area
         bool isIn = false;
         for (int i = 0; i < numPoints; i++)
         {
@@ -127,37 +119,32 @@ public class VoronoiTexture_v4 : MonoBehaviour {
                         isIn = true;
                     }
                 }
-
                 if(!isIn)
                 {
                     aux.Add(areaVertexes[i][j]);
-                    //Debug.Log(areaVertexes[i][j]);
                 }
             }
             areaVertexesClean[i] = aux;
-            //Debug.Log("num " + i + ": " +  aux.Count);
         }
 
-        //for (int i = 0; i < areaVertexesClean.Length; i++)
-        //{
-        //    Debug.Log(areaVertexesClean[i].Count);
-        //}
-
+        // We provisionally organize the vertices 
         for (int i = 0; i < areaVertexesClean.Length; i++)
         {
             for (int j = 0; j < areaVertexesClean[i].Count - 1; j++)
             {
-                for (int k = 0; k < areaVertexesClean[i].Count - j -1; k++)
+                for (int k = 0; k < areaVertexesClean[i].Count - j - 1; k++)
+                {
                     if (areaVertexesClean[i][k].x > areaVertexesClean[i][k + 1].x && areaVertexesClean[i][k].z > areaVertexesClean[i][k + 1].z)
                     {
                         var tempVar = areaVertexesClean[i][k];
                         areaVertexesClean[i][k] = areaVertexesClean[i][k + 1];
                         areaVertexesClean[i][k + 1] = tempVar;
                     }
+                }
             }
         }
 
-        //we color the vertexes
+        // We color the vertexes
         for (int i = 0; i < areaVertexesClean.Length; i++)
         {
             for (int j = 0; j < areaVertexesClean[i].Count; j++)
@@ -179,7 +166,7 @@ public class VoronoiTexture_v4 : MonoBehaviour {
 
         GetComponent<Renderer>().material.mainTexture = texture;
 
-        Debug.Log(ColorUtility.ToHtmlStringRGB(regionColors[0]) + " " + areaVertexesClean[0].Count);
+        //Debug.Log(ColorUtility.ToHtmlStringRGB(regionColors[0]) + " " + areaVertexesClean[0].Count);
     }
 
     private void checkVertexes(Vector3[] points, int indexArea, Color[] regionColors)
@@ -424,7 +411,6 @@ public class VoronoiTexture_v4 : MonoBehaviour {
     /*
     Mesh: 
         Vector3[] vertices
-        Vector3[] uvs
         int[] triangles
     
     To do:
@@ -445,19 +431,16 @@ public class VoronoiTexture_v4 : MonoBehaviour {
             newMesh.vertices = listVerticesArea[v].ToArray();
             int auxVertices = 1;
             List<int> aux = new List<int>();
-            //StreamWriter fichero = new StreamWriter("C:\\Users\\User\\UNITY\\ShatterFX\\Assets\\Scripts\\Voronoi_v3\\vertices.txt");
 
             if(newMesh.vertices.Length >= 3) //There needs to be at least 3 vertices for a triangle
             {
                 newMesh.triangles = new int[(newMesh.vertices.Length - 2) * 6];
                 for (int j = 1; j <= newMesh.vertices.Length - 2; j++) //The number of triangles is the number of vertices minus 2
                 {
-                    //fichero.WriteLine("Vertice 0:" + newMesh.vertices[0] + " Vertice "  + (auxVertices+1) + ":" + " " + newMesh.vertices[auxVertices+1]  + " Vértice " + auxVertices + ":"+ " " + newMesh.vertices[auxVertices]);
                     aux.Add(0);
                     aux.Add(auxVertices++);
                     aux.Add(auxVertices);
                 }
-                //fichero.Close();
             }
 
             newMesh.triangles = aux.ToArray();
@@ -472,22 +455,29 @@ public class VoronoiTexture_v4 : MonoBehaviour {
                 Debug.Log("Vertice: " + newMesh.triangles[i] + ", Coord: " + newMesh.vertices[newMesh.triangles[i]]);
             }*/
 
-            GameObject a = new GameObject(name = "piece_" + v);
-            a.AddComponent<MeshFilter>();
-            a.AddComponent<MeshRenderer>();
-            a.transform.GetComponent<MeshFilter>().mesh = newMesh;
+            //Create a gameobject for each of the resulting pieces
+            GameObject piece = new GameObject(name = "piece_" + v);
 
-            a.transform.localScale = new Vector3 (0.01245685f, 0.01245685f, 0.01245685f);
-            a.transform.rotation = Quaternion.Euler(90, 0, -45);
+            //Add the generated mesh and a glass-like material to the piece
+            piece.AddComponent<MeshFilter>();
+            piece.AddComponent<MeshRenderer>();
+            piece.GetComponent<MeshFilter>().mesh = newMesh;
+            piece.GetComponent<MeshRenderer>().material = material;
 
-            a.GetComponent<MeshRenderer>().material = material;
-            a.AddComponent<MeshCollider>();
-            a.GetComponent<MeshCollider>().convex = true;
-            a.AddComponent<Rigidbody>();
+            //Adjust the position and the scale of the piece
+            piece.transform.position = new Vector3(0, -0.75f, 0);
+            piece.transform.localScale = new Vector3 (0.00315f, 0.00315f, 0.00315f); //Adjusted to size = 512
+            piece.transform.rotation = Quaternion.Euler(90, 0, -45);
+
+            //Add the physics elements so that it has a weight and a collider
+            piece.AddComponent<MeshCollider>();
+            piece.GetComponent<MeshCollider>().convex = true;
+            piece.AddComponent<Rigidbody>();
+            piece.GetComponent<Rigidbody>().velocity = GetComponent<Rigidbody>().velocity;
         }
     }
 
-    private void orderVerticesForNewMesh_v3()
+    private void orderVerticesForNewMesh()
     {
         //1º Hacer la Z media entre la Z máxima y la Z mínima
         //2º Hacer 2 grupos de vértices (los que etsán por encima de la Z media y los que están por debajo) y asignar los vértices según sus Z
@@ -524,8 +514,8 @@ public class VoronoiTexture_v4 : MonoBehaviour {
                 }
             }
 
-            Debug.Log("Max Z: " + maxZ);
-            Debug.Log("Min Z: " + minZ);
+            //Debug.Log("Max Z: " + maxZ);
+            //Debug.Log("Min Z: " + minZ);
 
             float mediumZ = (maxZ + minZ) / 2;
 
@@ -571,7 +561,7 @@ public class VoronoiTexture_v4 : MonoBehaviour {
                     }
             }
 
-            Debug.Log("Orden vértices de arriba:\n");
+            /*Debug.Log("Orden vértices de arriba:\n");
             for (int i = 0; i < topVertices.Count; i++)
             {
                 Debug.Log(topVertices[i]);
@@ -580,7 +570,7 @@ public class VoronoiTexture_v4 : MonoBehaviour {
             for (int i = 0; i < bottomVertices.Count; i++)
             {
                 Debug.Log(bottomVertices[i]);
-            }
+            }*/
 
             //4º Juntarlos
             int indexMainArray = 0;
@@ -596,11 +586,11 @@ public class VoronoiTexture_v4 : MonoBehaviour {
                 indexMainArray++;
             }
 
-            Debug.Log("Orden del array");
+            /*Debug.Log("Orden del array");
             for (int i = 0; i < arrayVertices.Count; i++)
             {
                 Debug.Log(arrayVertices[i]);
-            }
+            }*/
 
            /* //COLOREAMOS PIXELES
             for (int i = 0; i < arrayVertices.Count; i++)
@@ -620,6 +610,16 @@ public class VoronoiTexture_v4 : MonoBehaviour {
         GetComponent<Renderer>().material.mainTexture = texture;*/
 
     }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.tag == "Suelo")
+        {
+            CreateVoronoi();
+            orderVerticesForNewMesh();
+            breakMesh();
+            this.gameObject.SetActive(false);
+            Debug.Log("End");
+        }
+    }
 }
-//Vector3(0.551999927,-0.795000017,-0.556999922) -- Vector3(270,135,90)
-//Vector3(0.551999986,-2.4690001,-0.556999981)
