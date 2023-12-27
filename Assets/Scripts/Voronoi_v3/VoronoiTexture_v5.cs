@@ -24,49 +24,43 @@ public class VoronoiTexture_v5 : MonoBehaviour {
     List<Vector3>[] listVerticesArea;
 
     void Start() {
-        areaVertexes = new List<Vector3>[(numPoints + 10)];
-        for (int i = 0; i < (numPoints + 10); i++) {
+        // Increase the number of points by 10 for the collision area
+        numPoints += 20;
+        areaVertexes = new List<Vector3>[numPoints];
+        for (int i = 0; i < numPoints; i++) {
             areaVertexes[i] = new List<Vector3>();
         }
 
-        areaVertexesClean = new List<Vector3>[(numPoints + 10)];
-        for (int i = 0; i < (numPoints + 10); i++) {
+        areaVertexesClean = new List<Vector3>[numPoints];
+        for (int i = 0; i < numPoints; i++) {
             areaVertexesClean[i] = new List<Vector3>();
         }
 
         pixelColors = new Color[size * size];
-        regionColors = new Color[(numPoints + 10)];
+        regionColors = new Color[numPoints];
 
-        listVerticesArea = new List<Vector3>[(numPoints + 10)];
-        for (int i = 0; i < (numPoints + 10); i++) {
+        listVerticesArea = new List<Vector3>[numPoints];
+        for (int i = 0; i < numPoints; i++) {
             listVerticesArea[i] = new List<Vector3>();
         }
     }
 
     public void CreateVoronoi(Vector3 collisionPoint) {
-        // Increase the number of points only if a collision point is provided
-        int totalPoints = numPoints;
-        if (collisionPoint != Vector3.zero) {
-            totalPoints += 10; // Increase the number of points by 10 for the collision area
-        }
-
         Debug.Log("COL:" + collisionPoint);
         // Arrays to store Voronoi points and corresponding region colors
-        Vector3[] points = new Vector3[totalPoints];
+        Vector3[] points = new Vector3[numPoints];
 
         // Generate random points and colors
         //V3: we supose the order of 'regionColors[]' tells us which point of 'points[]' is assigned to each color area
-        for (int i = 0; i < numPoints; i++) {
+        for (int i = 0; i < numPoints - 20; i++) {
             points[i] = new Vector3(UnityEngine.Random.Range(0, size), 0, UnityEngine.Random.Range(0, size));
         }
 
-        if (collisionPoint != Vector3.zero) {
-            for (int i = numPoints; i < totalPoints; i++) {
-                points[i] = new Vector3(collisionPoint.x + UnityEngine.Random.Range(1f, 3f), 0, collisionPoint.z + UnityEngine.Random.Range(1f, 3f));
-            }
+        for (int i = numPoints - 20; i < numPoints; i++) {
+            points[i] = new Vector3(collisionPoint.x + UnityEngine.Random.Range(1f, 100f), 0, collisionPoint.z + UnityEngine.Random.Range(1f, 100f));
         }
 
-        for (int i = 0; i < (numPoints + 10); i++) {
+        for (int i = 0; i < numPoints; i++) {
             regionColors[i] = new Color(UnityEngine.Random.Range(0f, 1f), UnityEngine.Random.Range(0f, 1f), UnityEngine.Random.Range(0f, 1f), 1f);
         }
 
@@ -77,7 +71,7 @@ public class VoronoiTexture_v5 : MonoBehaviour {
                 int value = 0;
 
                 // Find the nearest point for each pixel
-                for (int i = 0; i < (numPoints + 10); i++) {
+                for (int i = 0; i < numPoints; i++) {
                     if (Vector3.Distance(new Vector3(x, 0, z), points[i]) < distance) {
                         distance = Vector3.Distance(new Vector3(x, 0, z), points[i]);
                         value = i;
@@ -85,13 +79,12 @@ public class VoronoiTexture_v5 : MonoBehaviour {
                 }
 
                 // Assign the color of the nearest point to the pixel
-                pixelColors[x + z * size] = regionColors[value % (numPoints + 10)];
+                pixelColors[x + z * size] = regionColors[value % numPoints];
             }
         }
 
         // Set specific pixels to black to highlight the Voronoi points
         foreach (Vector3 point in points) {
-            Debug.Log(point);
             int x = (int)point.x;
             int z = (int)point.z;
             pixelColors[x + z * size] = Color.black;
@@ -107,7 +100,7 @@ public class VoronoiTexture_v5 : MonoBehaviour {
 
         // We remove the duplicate values of every list for each area
         bool isIn = false;
-        for (int i = 0; i < (numPoints + 10); i++) {
+        for (int i = 0; i < numPoints; i++) {
             List<Vector3> aux = new List<Vector3>();
             for (int j = 0; j < areaVertexes[i].Count; j++) {
                 isIn = false;
@@ -250,7 +243,7 @@ public class VoronoiTexture_v5 : MonoBehaviour {
             |                  |
             --------------------
             C                  D
-         
+
 
             Recta CA: x = 0   
             Recta AB: y = size - 1
@@ -326,7 +319,7 @@ public class VoronoiTexture_v5 : MonoBehaviour {
     private void AddCorners(Color[] pixelColors, Color[] regionColors) {
         // For each of the colors, we check if the corner is the same color as its area
         for (int i = 0; i < regionColors.Length; i++) { // x + z * size
-            //If it is, we add the corner to that area's vertexes
+                                                        //If it is, we add the corner to that area's vertexes
             if (pixelColors[0] == regionColors[i]) // x = 0, z = 0
             {
                 areaVertexes[i].Add(new Vector3(0, 0, 0));
@@ -425,7 +418,7 @@ public class VoronoiTexture_v5 : MonoBehaviour {
     private void breakMesh() {
         /*
         A mesh is composed of an array of Vector3 for vertices and array of integers for the triangles
-        
+
         Mesh: 
             Vector3[] vertices
             int[] triangles
@@ -478,12 +471,10 @@ public class VoronoiTexture_v5 : MonoBehaviour {
         }
     }
 
-    private void OnTriggerEnter(Collider other) {
+    private void OnCollisionEnter(Collision other) {
         // If the plane has collided with the floor, we "break" it
-        if (other.tag == "Suelo") {
-            Vector3 collisionPoint = other.ClosestPoint(transform.position);
-
-            CreateVoronoi(collisionPoint);
+        if (other.gameObject.tag == "Suelo") {
+            Vector3 collisionPoint = other.collider.ClosestPoint(transform.position);
             orderVerticesForNewMesh();
             breakMesh();
             this.gameObject.SetActive(false);

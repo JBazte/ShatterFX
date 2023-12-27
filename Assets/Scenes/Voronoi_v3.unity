@@ -159,7 +159,7 @@ MeshCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 1
+  m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 5
@@ -224,13 +224,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1177242414}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.27059802, y: -0.6532815, z: -0.6532815, w: 0.27059802}
+  m_LocalRotation: {x: -0.6532815, y: -0.27059796, z: 0.27059808, w: -0.6532815}
   m_LocalPosition: {x: 0.5519999, y: -0.795, z: -0.5569999}
   m_LocalScale: {x: 0.16, y: 0.16, z: 0.16}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 90, y: 180, z: -45}
+  m_LocalEulerAnglesHint: {x: 90, y: 180, z: 135}
 --- !u!54 &1177242421
 Rigidbody:
   m_ObjectHideFlags: 0

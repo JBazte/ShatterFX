@@ -12,9 +12,15 @@ public class CameraMovement : MonoBehaviour {
 
     private void Start() {
         originalTimeScale = Time.timeScale;
+        Time.timeScale = 0;
+        m_PreviousPosition = m_Camera.ScreenToViewportPoint(Input.mousePosition);
     }
 
     void Update() {
+        if (Input.GetKey(KeyCode.P)) {
+            Time.timeScale = 1;
+        }
+
         if (Input.GetMouseButtonDown(0)) {
             m_PreviousPosition = m_Camera.ScreenToViewportPoint(Input.mousePosition);
         }
