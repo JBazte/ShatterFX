@@ -459,9 +459,9 @@ public class VoronoiTexture_v5 : MonoBehaviour {
             piece.GetComponent<MeshRenderer>().material = material;
 
             //Adjust the position and the scale of the piece
-            piece.transform.position = new Vector3(0, -0.75f, 0);
-            piece.transform.localScale = new Vector3(0.00315f, 0.00315f, 0.00315f); //Adjusted to size = 512
-            piece.transform.rotation = Quaternion.Euler(90, 0, -45);
+            piece.transform.position = new Vector3(0, -2.39f, 0);
+            piece.transform.localScale = new Vector3(0.003120452f, 0.003120452f, 0.003120452f); //Adjusted to size = 512
+            piece.transform.rotation = Quaternion.Euler(225, -45, -90);
 
             //Add the physics elements so that it has a weight and a collider
             piece.AddComponent<MeshCollider>();
@@ -471,10 +471,13 @@ public class VoronoiTexture_v5 : MonoBehaviour {
         }
     }
 
-    private void OnCollisionEnter(Collision other) {
+    private void OnCollisionEnter(Collision other)
+    {
         // If the plane has collided with the floor, we "break" it
-        if (other.gameObject.tag == "Suelo") {
+        if (other.gameObject.tag == "Suelo")
+        {
             Vector3 collisionPoint = other.collider.ClosestPoint(transform.position);
+            CreateVoronoi(collisionPoint);
             orderVerticesForNewMesh();
             breakMesh();
             this.gameObject.SetActive(false);
