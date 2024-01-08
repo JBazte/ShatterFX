@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
-using static UnityEditor.Searcher.SearcherWindow.Alignment;
 using UnityEngine.AI;
 using System.IO;
 
@@ -468,14 +467,14 @@ public class VoronoiTexture_v5 : MonoBehaviour {
             piece.GetComponent<MeshCollider>().convex = true;
             piece.AddComponent<Rigidbody>();
             piece.GetComponent<Rigidbody>().velocity = GetComponent<Rigidbody>().velocity;
+            piece.GetComponent<Rigidbody>().interpolation = RigidbodyInterpolation.Interpolate;
+            piece.GetComponent<Rigidbody>().collisionDetectionMode = CollisionDetectionMode.Continuous;
         }
     }
 
-    private void OnCollisionEnter(Collision other)
-    {
+    private void OnCollisionEnter(Collision other) {
         // If the plane has collided with the floor, we "break" it
-        if (other.gameObject.tag == "Suelo")
-        {
+        if (other.gameObject.tag == "Suelo") {
             Vector3 collisionPoint = other.collider.ClosestPoint(transform.position);
             CreateVoronoi(collisionPoint);
             orderVerticesForNewMesh();
